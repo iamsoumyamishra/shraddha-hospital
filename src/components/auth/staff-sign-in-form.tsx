@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -41,13 +40,8 @@ export function StaffSignInForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>{t("signInTitle")}</CardTitle>
-        <CardDescription>{t("signInDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    // The page supplies the surrounding card; this component owns only the form.
+    <form onSubmit={handleSubmit} className="space-y-4">
           {error ? (
             <Alert variant="destructive" role="alert">
               <AlertDescription>{error}</AlertDescription>
@@ -60,6 +54,8 @@ export function StaffSignInForm() {
               type="email"
               autoComplete="username"
               required
+              autoFocus
+              className="h-11"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
@@ -71,11 +67,12 @@ export function StaffSignInForm() {
               type="password"
               autoComplete="current-password"
               required
+              className="h-11"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" size="lg" className="h-11 w-full" disabled={submitting}>
             {submitting ? (
               <>
                 <Loader2 aria-hidden className="mr-2 size-4 animate-spin" />
@@ -85,8 +82,6 @@ export function StaffSignInForm() {
               t("signIn")
             )}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+    </form>
   );
 }

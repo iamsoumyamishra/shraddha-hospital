@@ -21,7 +21,16 @@ import {
   TrendCard,
 } from "@/components/dashboard/charts";
 import { Link } from "@/i18n/navigation";
-import { ArrowRight, Inbox, Users } from "lucide-react";
+import {
+  ArrowRight,
+  ClipboardCheck,
+  Inbox,
+  Info,
+  Percent,
+  Smile,
+  Users,
+} from "lucide-react";
+import { cn } from "cn";
 
 export const dynamic = "force-dynamic";
 
@@ -141,6 +150,7 @@ export default async function MainDashboardPage({
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
+              icon={Smile}
               title={t("metrics.phiIndex")}
               hint={t("metrics.phiIndexHint")}
               value={
@@ -149,16 +159,19 @@ export default async function MainDashboardPage({
               emphasis
             />
             <MetricCard
+              icon={ClipboardCheck}
               title={t("metrics.completedResponses")}
               hint={t("metrics.completedResponsesHint")}
               value={format.number(report.completedCount)}
             />
             <MetricCard
+              icon={Inbox}
               title={t("metrics.totalSubmissions")}
               hint={`${format.number(report.incompleteCount)} ${tResponses("status")}`}
               value={format.number(report.totalCount)}
             />
             <MetricCard
+              icon={Percent}
               title={t("metrics.completionRate")}
               hint={t("metrics.completionRateHint")}
               value={
@@ -169,9 +182,14 @@ export default async function MainDashboardPage({
 
           {/* The public QR mode has no invitation denominator, so the completion
               rate above is completed over total submissions and nothing more. */}
-          <aside className="rounded-lg border border-dashed p-4 text-sm">
-            <p className="font-medium">{t("metrics.noInvitations")}</p>
-            <p className="mt-1 text-muted-foreground">{t("metrics.noInvitationsBody")}</p>
+          <aside className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-4 text-sm shadow-card">
+            <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
+            <div className="space-y-1">
+              <p className="font-medium">{t("metrics.noInvitations")}</p>
+              <p className="leading-relaxed text-muted-foreground">
+                {t("metrics.noInvitationsBody")}
+              </p>
+            </div>
           </aside>
 
           <CategoryScoresCard
@@ -339,23 +357,36 @@ function MetricCard({
   title,
   hint,
   value,
+  icon: Icon,
   emphasis,
 }: {
   title: string;
   hint: string;
   value: string | null;
+  icon: typeof Smile;
   emphasis?: boolean;
 }) {
   return (
-    <Card className={emphasis ? "border-primary/40" : undefined}>
+    <Card
+      className={cn(
+        "relative overflow-hidden",
+        // The primary KPI is tinted so it reads as the headline number without
+        // relying on size alone. The icon repeats that cue for anyone who cannot
+        // distinguish the tint from the card background.
+        emphasis && "border-primary/35 bg-accent/35",
+      )}
+    >
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Icon aria-hidden className="size-4 text-primary" />
+          {title}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold tabular-nums">
+        <p className="text-3xl font-semibold tracking-tight tabular-nums">
           {value ?? <span className="text-muted-foreground">—</span>}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+        <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{hint}</p>
       </CardContent>
     </Card>
   );

@@ -4,11 +4,26 @@
     "tagline": "Patient experience feedback"
   },
   "landing": {
+    "eyebrow": "Outpatient survey",
     "title": "Tell us about your visit",
-    "description": "Your feedback helps us improve the services you use. It takes about three minutes, and you do not need an account.",
+    "description": "Your answers help us improve the services you use. There are 15 short questions and no account is needed.",
     "start": "Start the survey",
-    "urgentHeading": "Need help right now?",
-    "urgentBody": "This form is not monitored for emergencies. If you need urgent care, please contact the hospital directly."
+    "startHint": "Takes about three minutes",
+    "features": {
+      "time": "About three minutes",
+      "noAccount": "No account or sign-in",
+      "anonymous": "No name or patient ID",
+      "questions": "15 short questions"
+    },
+    "whyTitle": "Why we ask",
+    "whyBody": "We publish how each service scores so we can be held to it. Your answers are reported as group averages, never linked back to you.",
+    "privacyTitle": "What we record",
+    "privacyItems": {
+      "services": "Which services you used",
+      "ratings": "Your rating for each question",
+      "comments": "Any comment you choose to write"
+    },
+    "privacyOmit": "We do not ask for your name, date of birth, diagnosis or any national identifier, and we cannot identify you from your answers."
   },
   "survey": {
     "stepOf": "Step {current} of {total}",
@@ -52,6 +67,13 @@
       "comment": "Your comment is too long.",
       "contactConsent": "Give contact details only if you agree to be contacted.",
       "submit": "We could not record your feedback. Please try again."
+    },
+    "steps": {
+      "privacy": "Privacy",
+      "services": "Services",
+      "questions": "Questions",
+      "review": "Review",
+      "contact": "Contact"
     }
   },
   "auth": {
@@ -206,5 +228,15 @@
     "signInRequired": "Sign in to continue",
     "notAuthorised": "You do not have access to this page.",
     "close": "Close"
+  },
+  "brand": {
+    "name": "Shraddha Hospital",
+    "tagline": "Patient experience",
+    "emergencyLabel": "Urgent or emergency help",
+    "emergencyBody": "This form is not monitored at any time. If someone needs urgent medical care, contact the hospital directly or go to the nearest emergency department."
+  },
+  "login": {
+    "brandLine": "Staff access",
+    "assurance": "Feedback data is limited to the branches and departments you are assigned to."
   }
 }

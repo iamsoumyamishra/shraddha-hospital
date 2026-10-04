@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -61,11 +62,11 @@ export function CategoryScoresCard({
           <div className="h-56 w-full" aria-hidden>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={visible} layout="vertical" margin={{ left: 24, right: 16 }}>
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <CartesianGrid horizontal={false} stroke="var(--border)" strokeDasharray="3 3" />
                 <XAxis type="number" domain={[0, 100]} tickLine={false} axisLine={false} />
                 <YAxis type="category" dataKey="label" width={140} tickLine={false} axisLine={false} />
                 <Tooltip formatter={(value) => [Number(value).toFixed(1), labels.score]} />
-                <Bar dataKey="score" fill="var(--color-chart-1)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="score" fill="var(--color-chart-1)" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -143,11 +144,18 @@ export function RatingDistributionCard({
             <div className="h-48 w-full" aria-hidden>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data} margin={{ left: 4, right: 16 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} interval={0} />
                   <YAxis tickLine={false} axisLine={false} width={40} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="var(--color-chart-2)" radius={[4, 4, 0, 0]} />
+                  {/* A sequential ramp, not five arbitrary hues: the rating
+                      scale is ordered, so the encoding should be too. Every bar
+                      now clears 3:1 against the card background. */}
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                    {data.map((item) => (
+                      <Cell key={item.rating} fill={`var(--rating-${item.rating})`} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -210,7 +218,7 @@ export function TrendCard({
             <div className="h-48 w-full" aria-hidden>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ left: 4, right: 16 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
                   <XAxis dataKey="periodLabel" tickLine={false} axisLine={false} />
                   <YAxis domain={[0, 100]} tickLine={false} axisLine={false} width={40} />
                   <Tooltip />
@@ -219,8 +227,9 @@ export function TrendCard({
                     dataKey="averageIndex"
                     name={labels.index}
                     stroke="var(--color-chart-1)"
-                    strokeWidth={2}
-                    dot={false}
+                    strokeWidth={2.5}
+                    dot={{ r: 2.5, fill: "var(--color-chart-1)" }}
+                    activeDot={{ r: 4.5 }}
                   />
                 </LineChart>
               </ResponsiveContainer>

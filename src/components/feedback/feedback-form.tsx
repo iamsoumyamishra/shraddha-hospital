@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { cn } from "cn";
+import { CheckCircle2, HeartPulse, Loader2, TriangleAlert } from "lucide-react";
 
 export interface FeedbackFormSurvey {
   slug: string;
@@ -42,7 +42,7 @@ type AnswerState = number | "na" | null;
 
 export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const t = useTranslations("survey");
-  const tLanding = useTranslations("landing");
+  const tBrand = useTranslations("brand");
 
   const [step, setStep] = useState(0);
   const [privacyAck, setPrivacyAck] = useState(false);
@@ -77,7 +77,8 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
   const totalSteps = 5;
   const answeredCount = Object.values(answers).filter((value) => value !== null).length;
-  const progress = Math.round((step / totalSteps) * 100);
+
+  const STEP_KEYS = ["privacy", "services", "questions", "review", "contact"] as const;
 
   // The error message is rendered once, above the step content. On the
   // questions step the content is far taller than any viewport, so someone who
@@ -120,9 +121,15 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
               </p>
             </div>
           ) : null}
-          <aside className="rounded-lg border border-dashed p-4 text-sm">
-            <p className="font-medium">{tLanding("urgentHeading")}</p>
-            <p className="mt-1 text-muted-foreground">{tLanding("urgentBody")}</p>
+          <aside className="flex items-start gap-3 rounded-lg border border-warning/60 bg-warning/45 p-4 text-sm">
+            <TriangleAlert
+              aria-hidden
+              className="mt-0.5 size-4 shrink-0 text-warning-foreground"
+            />
+            <div className="space-y-1">
+              <p className="font-semibold text-warning-foreground">{tBrand("emergencyLabel")}</p>
+              <p className="text-foreground/85">{tBrand("emergencyBody")}</p>
+            </div>
           </aside>
           <Button
             variant="outline"
@@ -240,19 +247,69 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">Shraddha Hospital</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{survey.title}</h1>
-        {survey.description ? (
-          <p className="text-muted-foreground">{survey.description}</p>
-        ) : null}
+      <header className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-raised"
+        >
+          <HeartPulse className="size-6" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-base font-semibold leading-tight tracking-tight">
+            {tBrand("name")}
+          </p>
+          <p className="truncate text-sm text-muted-foreground">{tBrand("tagline")}</p>
+        </div>
       </header>
 
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          {t("stepOf", { current: step + 1, total: totalSteps })}
-        </p>
-        <Progress value={progress} aria-hidden />
+      <div className="space-y-1.5">
+        <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+          {survey.title}
+        </h1>
+        {survey.description ? (
+          <p className="leading-relaxed text-muted-foreground">{survey.description}</p>
+        ) : null}
+      </div>
+
+      {/* Segmented stepper. The step count is also the accessible description of
+          the form region, so the position is never conveyed by colour alone. */}
+      <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4 shadow-card">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-sm font-medium">
+            {t("stepOf", { current: step + 1, total: totalSteps })}
+            <span className="text-muted-foreground">
+              {" · "}
+              {t(`steps.${STEP_KEYS[step]}`)}
+            </span>
+          </p>
+          {step === 2 ? (
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {answeredCount === survey.questions.length
+                ? t("allAnswered")
+                : t("answeredCount", {
+                    answered: answeredCount,
+                    total: survey.questions.length,
+                  })}
+            </p>
+          ) : null}
+        </div>
+
+        <ol aria-hidden className="flex gap-1.5">
+          {STEP_KEYS.map((key, index) => (
+            <li key={key} className="h-1.5 flex-1">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-colors",
+                  index < step
+                    ? "bg-primary/35"
+                    : index === step
+                      ? "bg-primary"
+                      : "bg-border",
+                )}
+              />
+            </li>
+          ))}
+        </ol>
       </div>
 
       {error ? (
@@ -467,18 +524,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
         </Card>
       ) : null}
 
-      {step === 2 ? (
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {answeredCount === survey.questions.length
-            ? t("allAnswered")
-            : t("answeredCount", {
-                answered: answeredCount,
-                total: survey.questions.length,
-              })}
-        </p>
-      ) : null}
-
-      <div className="flex gap-3">
+            <div className="flex gap-3">
         {step > 0 ? (
           <Button
             variant="outline"
@@ -530,29 +576,46 @@ function QuestionBlock({
   const t = useTranslations("survey");
   const selected = value === null ? undefined : value === "na" ? "na" : String(value);
 
+  // One selectable row per option. The row, not the 16px radio, is the touch
+  // target: many respondents are older, and a control this small is genuinely
+  // hard to hit one-handed on a phone.
+  // min-h-12 keeps every option at 48px, comfortably past the 44px minimum
+  // touch target, because many respondents are older.
+  const rowClass =
+    "flex min-h-12 items-center gap-3 rounded-xl border border-border/70 bg-card px-3.5 py-3 " +
+    "transition-colors hover:border-primary/45 hover:bg-accent/45 has-[:checked]:border-primary " +
+    "has-[:checked]:bg-accent has-[:checked]:shadow-card";
+
   return (
-    <fieldset className="space-y-3">
-      <legend className="text-sm font-medium leading-snug">{prompt}</legend>
+    <fieldset className="space-y-2.5">
+      <legend className="mb-1 text-sm font-semibold leading-snug text-pretty">{prompt}</legend>
       <RadioGroup
         value={selected}
         onValueChange={(next) => onChange(next === "na" ? "na" : Number(next))}
         className="gap-2"
       >
         {ratingValues.map((rating) => (
-          <div key={rating} className="flex items-center gap-3">
+          <div key={rating} className={rowClass}>
             <RadioGroupItem value={String(rating)} id={`${id}-${rating}`} />
-            <Label htmlFor={`${id}-${rating}`} className="font-normal">
-              <span className="font-medium tabular-nums">{rating}</span> — {scaleLabels[rating - 1]}
+            {/* Two spans so the number can be emphasised. The text content is
+                still exactly "4 — Satisfied", which is the accessible name the
+                end-to-end tests select on. */}
+            <Label htmlFor={`${id}-${rating}`} className="min-w-0 flex-1 cursor-pointer">
+              <span className="font-semibold tabular-nums">{rating}</span>
+              <span className="text-muted-foreground"> — {scaleLabels[rating - 1]}</span>
             </Label>
           </div>
         ))}
-        <div className="flex items-start gap-3">
-          <RadioGroupItem value="na" id={`${id}-na`} />
-          <div className="grid gap-1">
-            <Label htmlFor={`${id}-na`} className="font-normal">
+
+        <div className={cn(rowClass, "items-start py-3.5")}>
+          <RadioGroupItem value="na" id={`${id}-na`} className="mt-0.5" />
+          {/* The hint stays outside the label so the accessible name remains
+              exactly "Not applicable". */}
+          <div className="grid min-w-0 flex-1 gap-0.5">
+            <Label htmlFor={`${id}-na`} className="cursor-pointer font-medium">
               {t("notApplicable")}
             </Label>
-            <p className="text-xs text-muted-foreground">{t("notApplicableHint")}</p>
+            <p className="text-xs leading-snug text-muted-foreground">{t("notApplicableHint")}</p>
           </div>
         </div>
       </RadioGroup>

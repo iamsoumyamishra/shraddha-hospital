@@ -72,7 +72,7 @@ Use Node runtime for database/auth routes unless the selected dependencies expli
 | Area | Choice |
 | --- | --- |
 | Application | Next.js App Router, React, TypeScript in strict mode |
-| Styling/components | Tailwind CSS, shadcn/ui |
+| Styling/components | Tailwind CSS, shadcn/ui; light-only teal theme, see docs/decisions/0001-visual-language.md |
 | Forms/validation | React Hook Form, Zod; repeat validation on server |
 | Localization | next-intl |
 | Database | PostgreSQL |
