@@ -1,0 +1,487 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Tenant and scope
+// ---------------------------------------------------------------------------
+
+model Hospital {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  timezone  String   @default("Asia/Kolkata")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  branches        Branch[]
+  departments     Department[]
+  scoringPolicies ScoringPolicyVersion[]
+  surveyVersions  SurveyVersion[]
+  memberships     Membership[]
+  submissions     FeedbackSubmission[]
+  auditLogs       AuditLog[]
+
+  @@map("hospitals")
+}
+
+model Branch {
+  id         String   @id @default(uuid()) @db.Uuid
+  hospitalId String   @db.Uuid
+  name       String
+  code       String
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  departments  Department[]
+  memberships  Membership[]
+  submissions  FeedbackSubmission[]
+
+  @@unique([hospitalId, code])
+  @@index([hospitalId])
+  @@map("branches")
+}
+
+model Department {
+  id         String   @id @default(uuid()) @db.Uuid
+  hospitalId String   @db.Uuid
+  branchId   String?  @db.Uuid
+  name       String
+  code       String
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  hospital    Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  branch      Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  memberships Membership[]
+  submissions FeedbackSubmission[]
+
+  @@unique([hospitalId, code])
+  @@index([hospitalId])
+  @@index([branchId])
+  @@map("departments")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+//
+// The four tables below belong to Better Auth and follow its required shape
+// exactly. Application roles and scope live in StaffUser/Membership: auth owns
+// credentials, this application owns authorization.
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  sessions   Session[]
+  accounts   Account[]
+  staffUser StaffUser?
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model StaffUser {
+  id           String   @id @default(uuid()) @db.Uuid
+  authUserId   String   @unique
+  email        String   @unique
+  displayName  String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  authUser    User         @relation(fields: [authUserId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+  cases       FeedbackCase[]
+  auditLogs   AuditLog[]
+
+  @@map("staff_users")
+}
+
+enum StaffRole {
+  HOSPITAL_ADMIN
+  BRANCH_MANAGER
+  DEPARTMENT_HEAD
+  ANALYST
+}
+
+enum ScopeType {
+  HOSPITAL
+  BRANCH
+  DEPARTMENT
+}
+
+model Membership {
+  id           String     @id @default(uuid()) @db.Uuid
+  staffUserId  String     @db.Uuid
+  hospitalId   String     @db.Uuid
+  role         StaffRole
+  scopeType    ScopeType
+  branchId     String?    @db.Uuid
+  departmentId String?    @db.Uuid
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+
+  staffUser  StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  hospital   Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  branch     Branch?     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([staffUserId, hospitalId, scopeType, branchId, departmentId])
+  @@index([staffUserId])
+  @@index([hospitalId, scopeType])
+  @@index([branchId])
+  @@index([departmentId])
+  @@map("memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Survey definition. Published versions are immutable: an edit creates a new row.
+// ---------------------------------------------------------------------------
+
+enum SurveyStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+model ScoringPolicyVersion {
+  id         String   @id @default(uuid()) @db.Uuid
+  hospitalId String   @db.Uuid
+  version    Int
+  name       String
+  // Serialised policy rules: completion rule, rating scale, weight strategy.
+  rules      Json
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  hospital         Hospital             @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  surveyVersions   SurveyVersion[]
+  submissions      FeedbackSubmission[]
+  categoryScores   CategoryScore[]
+
+  @@unique([hospitalId, version])
+  @@index([hospitalId, isActive])
+  @@map("scoring_policy_versions")
+}
+
+model SurveyVersion {
+  id                     String       @id @default(uuid()) @db.Uuid
+  hospitalId             String       @db.Uuid
+  slug                   String
+  version                Int
+  title                  String
+  description            String?
+  visitTypes             String[]
+  /// Patient-facing survey chrome for this version: the services-used options
+  /// and the category headings shown above grouped questions. Stored with the
+  /// version so an edit creates v2 rather than silently changing a published
+  /// survey. Simplified for the focused core; a proper translation table per
+  /// category and service is the follow-up if the structure grows.
+  patientPresentation    Json                @default("{}")
+  status                 SurveyStatus @default(DRAFT)
+  scoringPolicyVersionId String       @db.Uuid
+  publishedAt            DateTime?    @db.Timestamptz(3)
+  createdAt              DateTime     @default(now()) @db.Timestamptz(3)
+
+  hospital             Hospital             @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  scoringPolicyVersion ScoringPolicyVersion @relation(fields: [scoringPolicyVersionId], references: [id])
+  categories           Category[]
+  questions            Question[]
+  submissions          FeedbackSubmission[]
+
+  @@unique([hospitalId, slug, version])
+  @@index([hospitalId, slug, status])
+  @@index([scoringPolicyVersionId])
+  @@map("survey_versions")
+}
+
+model Category {
+  id              String  @id @default(uuid()) @db.Uuid
+  surveyVersionId String  @db.Uuid
+  key             String
+  weight          Decimal @default(1) @db.Decimal(10, 4)
+  sortOrder       Int
+  isCore          Boolean @default(true)
+
+  surveyVersion SurveyVersion   @relation(fields: [surveyVersionId], references: [id], onDelete: Cascade)
+  questions     Question[]
+  scores        CategoryScore[]
+
+  @@unique([surveyVersionId, key])
+  @@index([surveyVersionId, sortOrder])
+  @@map("categories")
+}
+
+enum QuestionType {
+  RATING
+}
+
+model Question {
+  id              String       @id @default(uuid()) @db.Uuid
+  surveyVersionId String       @db.Uuid
+  categoryId      String       @db.Uuid
+  key             String
+  type            QuestionType @default(RATING)
+  isRequired      Boolean      @default(true)
+  sortOrder       Int
+  // Reserved for conditional display. Every v1 question is always applicable,
+  // so this stays null until a later survey version uses it.
+  appliesWhen     Json?
+
+  surveyVersion SurveyVersion         @relation(fields: [surveyVersionId], references: [id], onDelete: Cascade)
+  category      Category              @relation(fields: [categoryId], references: [id])
+  translations  QuestionTranslation[]
+  answers       Answer[]
+
+  @@unique([surveyVersionId, key])
+  @@index([surveyVersionId, sortOrder])
+  @@index([categoryId])
+  @@map("questions")
+}
+
+enum TranslationStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+model QuestionTranslation {
+  id           String            @id @default(uuid()) @db.Uuid
+  questionId   String            @db.Uuid
+  // Open BCP-47 string rather than an enum: adding a language must not need a migration.
+  locale       String
+  prompt       String
+  helpText     String?
+  status       TranslationStatus @default(DRAFT)
+  reviewedById String?           @db.Uuid
+  reviewedAt   DateTime?         @db.Timestamptz(3)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @db.Timestamptz(3)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, locale])
+  @@index([locale, status])
+  @@map("question_translations")
+}
+
+// ---------------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------------
+
+enum SubmissionStatus {
+  COMPLETE
+  INCOMPLETE
+}
+
+enum RespondentRole {
+  PATIENT
+  CAREGIVER
+}
+
+enum AnswerState {
+  ANSWERED
+  NOT_APPLICABLE
+}
+
+model FeedbackSubmission {
+  id                     String           @id @default(uuid()) @db.Uuid
+  // Opaque acknowledgement handle. Random, not sequential, contains no personal data.
+  publicId               String           @unique
+  surveyVersionId        String           @db.Uuid
+  scoringPolicyVersionId String           @db.Uuid
+  hospitalId             String           @db.Uuid
+  branchId               String?          @db.Uuid
+  departmentId           String?          @db.Uuid
+  status                 SubmissionStatus
+  // Null for incomplete submissions: an incomplete response has no official index.
+  patientIndex           Decimal?         @db.Decimal(7, 4)
+  respondentRole         RespondentRole   @default(PATIENT)
+  locale                 String           @default("en")
+  visitType              String
+  servicesUsed           String[]
+  // Standalone overall-experience question. Kept separate from the calculated index.
+  overallRating          Int?
+  comment                String?
+  // Client-generated key that makes a retried submit a no-op instead of a duplicate.
+  idempotencyKey         String
+  submittedAt            DateTime         @default(now()) @db.Timestamptz(3)
+
+  surveyVersion        SurveyVersion        @relation(fields: [surveyVersionId], references: [id])
+  scoringPolicyVersion ScoringPolicyVersion @relation(fields: [scoringPolicyVersionId], references: [id])
+  hospital             Hospital             @relation(fields: [hospitalId], references: [id])
+  branch               Branch?              @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  department           Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  answers              Answer[]
+  categoryScores       CategoryScore[]
+  followUpContact      FollowUpContact?
+  case                 FeedbackCase?
+
+  @@unique([surveyVersionId, idempotencyKey])
+  @@index([hospitalId, submittedAt])
+  @@index([surveyVersionId, submittedAt])
+  @@index([branchId, submittedAt])
+  @@index([departmentId, submittedAt])
+  @@index([status, submittedAt])
+  @@map("feedback_submissions")
+}
+
+model Answer {
+  id           String      @id @default(uuid()) @db.Uuid
+  submissionId String      @db.Uuid
+  questionId   String      @db.Uuid
+  state        AnswerState @default(ANSWERED)
+  // Null when state is NOT_APPLICABLE. Held as the original 1-5 rating.
+  value        Int?
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+
+  submission FeedbackSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question   Question           @relation(fields: [questionId], references: [id])
+
+  @@unique([submissionId, questionId])
+  @@index([questionId])
+  @@map("answers")
+}
+
+model CategoryScore {
+  id                     String  @id @default(uuid()) @db.Uuid
+  submissionId           String  @db.Uuid
+  categoryId             String  @db.Uuid
+  scoringPolicyVersionId String  @db.Uuid
+  // Null when the category had no valid answer. Never stored as zero.
+  score                  Decimal? @db.Decimal(7, 4)
+  answeredCount          Int
+  createdAt              DateTime @default(now()) @db.Timestamptz(3)
+
+  submission           FeedbackSubmission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  category             Category             @relation(fields: [categoryId], references: [id])
+  scoringPolicyVersion ScoringPolicyVersion @relation(fields: [scoringPolicyVersionId], references: [id])
+
+  @@unique([submissionId, categoryId])
+  @@index([categoryId])
+  @@index([scoringPolicyVersionId])
+  @@map("category_scores")
+}
+
+// Contact details live apart from survey answers and are read only through
+// authorization, with every reveal written to the audit log.
+model FollowUpContact {
+  id               String   @id @default(uuid()) @db.Uuid
+  submissionId     String   @unique @db.Uuid
+  displayName      String?
+  phone            String?
+  email            String?
+  consentGiven     Boolean  @default(false)
+  privacyNoticeVersion String
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+
+  submission FeedbackSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("follow_up_contacts")
+}
+
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+model FeedbackCase {
+  id            String     @id @default(uuid()) @db.Uuid
+  submissionId  String     @unique @db.Uuid
+  hospitalId    String     @db.Uuid
+  branchId      String?    @db.Uuid
+  assignedToId  String?    @db.Uuid
+  status        CaseStatus @default(OPEN)
+  resolutionNote String?
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+  resolvedAt    DateTime?  @db.Timestamptz(3)
+
+  submission FeedbackSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  assignedTo StaffUser?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, status])
+  @@index([branchId, status])
+  @@index([assignedToId])
+  @@map("feedback_cases")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  hospitalId    String?  @db.Uuid
+  actorStaffId  String?  @db.Uuid
+  action        String
+  entityType    String
+  entityId      String?
+  // Free-form context only. Never store contact details, comments or tokens here.
+  metadata      Json?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  hospital Hospital?  @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  actor    StaffUser? @relation(fields: [actorStaffId], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, createdAt])
+  @@index([actorStaffId, createdAt])
+  @@map("audit_logs")
+}

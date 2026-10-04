@@ -1,2 +1,7 @@
 allowBuilds:
-  unrs-resolver: set this to true or false
+  '@parcel/watcher': true
+  '@prisma/engines': true
+  '@swc/core': true
+  esbuild: true
+  prisma: true
+  unrs-resolver: true
