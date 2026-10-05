@@ -109,3 +109,43 @@ from weight and fill rather than from drop shadows everywhere.
   its label, rating label 15.20:1 on its row, visible focus indicator,
   accessible names resolve one per question (`4 — Satisfied`, `Not applicable`),
   N/A hint excluded from the accessible name, staff nav landmark present.
+
+## Frontend refinement — 2026-10-06
+
+The patient and staff interfaces now use a more restrained corporate treatment:
+neutral slate backgrounds, white surfaces, consistent card padding, smaller
+corner radii, and subtle elevation. The existing teal primary, text, control,
+and rating colours are retained.
+
+- Patient landing: responsive split hero, a three-step explanation, and a clear
+  primary action. The columns stack on smaller screens.
+- Patient form: wider reading area, labelled progress steps, two-column rating
+  options on larger screens, and sticky actions with safe-area padding. Mobile
+  rating options remain single-column with at least 48px height.
+- Staff login: split introduction and sign-in layout; password visibility can
+  be toggled with a labelled control.
+- Staff shell: active navigation, a section breadcrumb, a keyboard skip link,
+  a sticky header, and a bounded content area. Mobile uses the existing sidebar
+  drawer.
+- Reports: responsive filter controls, clearer table headers and row spacing,
+  and chart height that accommodates the number of visible categories. The
+  category chart excludes rows flagged as suppressed, matching its table.
+- Motion: reduced-motion preferences disable decorative transitions.
+
+This revision changes presentation components, UI messages, and page markup.
+It introduces no API, database, authentication, scoring, or authorization changes.
+
+### Verification of the refinement
+
+- `pnpm lint`, `pnpm typecheck`, and `git diff --check` passed.
+- An isolated production build using `next build --webpack` passed. The isolated
+  copy avoided interference from concurrent builds in the shared workspace.
+- All 20 patient Playwright tests passed against that preview, covering desktop
+  and mobile submission, not-applicable answers, consent validation, keyboard
+  interaction, and layout overflow.
+- Styled landing, login, mobile survey, and mobile ratings screenshots were
+  captured and visually inspected. Responsive smoke checks passed at 320, 768,
+  and 1440px without horizontal overflow. Password visibility toggling passed,
+  and rating targets measured 48px high.
+- Authenticated staff browser checks could not complete: the configured test
+  password was rejected. Accounts and authentication were not changed.

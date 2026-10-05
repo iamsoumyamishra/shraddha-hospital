@@ -43,6 +43,7 @@ type AnswerState = number | "na" | null;
 export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const t = useTranslations("survey");
   const tBrand = useTranslations("brand");
+  const tUi = useTranslations("ui");
 
   const [step, setStep] = useState(0);
   const [privacyAck, setPrivacyAck] = useState(false);
@@ -102,7 +103,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
-            <CheckCircle2 aria-hidden className="size-5 text-emerald-600" />
+            <CheckCircle2 aria-hidden className="size-5 text-primary" />
             {t("confirmationTitle")}
           </CardTitle>
         </CardHeader>
@@ -247,10 +248,10 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center gap-3">
+      <header className="patient-brand">
         <span
           aria-hidden
-          className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-raised"
+          className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"
         >
           <HeartPulse className="size-6" />
         </span>
@@ -262,8 +263,9 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
         </div>
       </header>
 
-      <div className="space-y-1.5">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+      <div className="space-y-3">
+        <p className="section-eyebrow">{tBrand("tagline")}</p>
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight text-balance sm:text-4xl">
           {survey.title}
         </h1>
         {survey.description ? (
@@ -273,7 +275,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
       {/* Segmented stepper. The step count is also the accessible description of
           the form region, so the position is never conveyed by colour alone. */}
-      <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4 shadow-card">
+      <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-xs sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <p className="text-sm font-medium">
             {t("stepOf", { current: step + 1, total: totalSteps })}
@@ -294,12 +296,12 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
           ) : null}
         </div>
 
-        <ol aria-hidden className="flex gap-1.5">
+        <ol aria-label={tUi("surveyProgress")} className="flex gap-2 sm:gap-3">
           {STEP_KEYS.map((key, index) => (
-            <li key={key} className="h-1.5 flex-1">
+            <li key={key} aria-current={index === step ? "step" : undefined} className="min-w-0 flex-1">
               <div
                 className={cn(
-                  "h-full rounded-full transition-colors",
+                  "h-1.5 rounded-full transition-colors",
                   index < step
                     ? "bg-primary/35"
                     : index === step
@@ -307,6 +309,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
                       : "bg-border",
                 )}
               />
+              <span className={cn("sr-only mt-2 text-xs sm:not-sr-only sm:block", index === step ? "font-semibold text-primary" : "text-muted-foreground")}>{t(`steps.${key}`)}</span>
             </li>
           ))}
         </ol>
@@ -392,9 +395,10 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
       {step === 2 ? (
         <div className="space-y-6">
+          <p className="text-sm leading-relaxed text-muted-foreground">{tUi("surveyHint")}</p>
           {grouped.map((group) => (
             <Card key={group.categoryKey}>
-              <CardHeader>
+              <CardHeader className="border-b border-border pb-4">
                 <CardTitle className="text-base">{group.label}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -524,7 +528,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
         </Card>
       ) : null}
 
-            <div className="flex gap-3">
+      <div className="patient-actions">
         {step > 0 ? (
           <Button
             variant="outline"
@@ -592,7 +596,7 @@ function QuestionBlock({
       <RadioGroup
         value={selected}
         onValueChange={(next) => onChange(next === "na" ? "na" : Number(next))}
-        className="gap-2"
+        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
       >
         {ratingValues.map((rating) => (
           <div key={rating} className={rowClass}>
@@ -607,7 +611,7 @@ function QuestionBlock({
           </div>
         ))}
 
-        <div className={cn(rowClass, "items-start py-3.5")}>
+        <div className={cn(rowClass, "items-start py-3.5 sm:col-span-2")}>
           <RadioGroupItem value="na" id={`${id}-na`} className="mt-0.5" />
           {/* The hint stays outside the label so the accessible name remains
               exactly "Not applicable". */}

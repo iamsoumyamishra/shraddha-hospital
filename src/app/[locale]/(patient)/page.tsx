@@ -3,6 +3,9 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  ArrowRight,
+  Check,
+  ClipboardList,
   Clock,
   HeartPulse,
   ListChecks,
@@ -23,6 +26,7 @@ export default async function FeedbackLandingPage({
   setRequestLocale(locale);
   const t = await getTranslations("landing");
   const tBrand = await getTranslations("brand");
+  const tUi = await getTranslations("ui");
 
   const features = [
     { icon: Clock, key: "features.time" },
@@ -38,49 +42,71 @@ export default async function FeedbackLandingPage({
   ] as const;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 py-10 sm:py-14">
+    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-8 px-5 py-6 sm:px-8 sm:py-10">
       <BrandHeader name={tBrand("name")} tagline={tBrand("tagline")} />
 
       <main className="space-y-6">
-        <section className="surface-panel overflow-hidden">
-          {/* A calm teal wash behind the hero keeps the first screen unmistakably
-              healthcare without a stock photograph of a smiling stock model. */}
-          <div
-            aria-hidden
-            className="h-24 w-full bg-gradient-to-r from-primary/12 via-primary/6 to-transparent"
-          />
-          <div className="-mt-12 space-y-5 px-6 pb-8 sm:px-8">
-            <div className="space-y-3">
-              <p className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
-                {t("eyebrow")}
-              </p>
-              <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <section className="surface-panel grid overflow-hidden lg:grid-cols-[1.2fr_1fr]">
+          <div className="flex flex-col justify-center gap-7 p-6 sm:p-10 lg:p-12">
+            <div className="space-y-5">
+              <p className="section-eyebrow">{t("eyebrow")}</p>
+              <h1 className="max-w-xl text-4xl font-semibold leading-[1.15] tracking-tight text-balance sm:text-5xl">
                 {t("title")}
               </h1>
-              <p className="max-w-prose text-base leading-relaxed text-muted-foreground">
+              <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
                 {t("description")}
               </p>
             </div>
-
-            <div className="space-y-2">
-              <Button asChild size="lg" className="h-14 w-full text-base sm:w-auto sm:px-10">
-                <Link href={`/feedback/${PUBLIC_SURVEY_SLUG}`}>{t("start")}</Link>
+            <div className="space-y-3">
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link href={`/feedback/${PUBLIC_SURVEY_SLUG}`}>
+                  {t("start")}<ArrowRight aria-hidden className="size-4" />
+                </Link>
               </Button>
-              <p className="text-sm text-muted-foreground">{t("startHint")}</p>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock aria-hidden className="size-3.5" />{t("startHint")}
+              </p>
             </div>
+          </div>
+          <div className="flex flex-col justify-center gap-6 border-t border-border bg-accent/30 p-6 sm:p-10 lg:border-t-0 lg:border-l lg:p-12">
+            <div className="flex items-center gap-3">
+              <span className="grid size-12 place-items-center rounded-xl border border-primary/15 bg-card text-primary">
+                <ClipboardList aria-hidden className="size-6" />
+              </span>
+              <div>
+                <p className="section-eyebrow">{tBrand("tagline")}</p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">{tUi("patientStepsTitle")}</h2>
+              </div>
+            </div>
+            <ol className="space-y-5">
+              {["choose", "rate", "submit"].map((key, index) => (
+                <li key={key} className="flex gap-4">
+                  <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full border border-primary/20 bg-card text-xs font-semibold text-primary">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div className="space-y-1 pt-1">
+                    <p className="text-sm font-semibold">{tUi(`patientSteps.${key}.title`)}</p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{tUi(`patientSteps.${key}.body`)}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="flex items-center gap-2 border-t border-primary/10 pt-5 text-xs font-medium text-primary">
+              <Check aria-hidden className="size-4" />{t("features.noAccount")}
+            </p>
           </div>
         </section>
 
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           {features.map(({ icon: Icon, key }) => (
             <li
               key={key}
-              className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-3.5 shadow-card"
+              className="flex items-start gap-3 rounded-lg border border-border bg-card p-4 sm:p-5"
             >
-              <span className="grid size-9 place-items-center rounded-lg bg-accent text-accent-foreground">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground">
                 <Icon aria-hidden className="size-4.5" />
               </span>
-              <span className="text-sm font-medium leading-snug">{t(key)}</span>
+              <span className="pt-1 text-sm font-medium leading-snug">{t(key)}</span>
             </li>
           ))}
         </ul>
@@ -122,12 +148,12 @@ export default async function FeedbackLandingPage({
 }
 
 /** Hospital identity. Repeated on the survey and confirmation screens. */
-export function BrandHeader({ name, tagline }: { name: string; tagline: string }) {
+function BrandHeader({ name, tagline }: { name: string; tagline: string }) {
   return (
-    <header className="flex items-center gap-3">
+    <header className="patient-brand">
       <span
         aria-hidden
-        className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-raised"
+        className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"
       >
         <HeartPulse className="size-6" />
       </span>

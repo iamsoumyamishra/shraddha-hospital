@@ -70,11 +70,11 @@
  * Foreground is a deep blue-slate rather than black: pure black on white is
  * harsh for long reading sessions, and staff spend a full shift in here.
  * Surfaces carry a faint cool tint so cards read as elevated without heavy
- * shadows. Every foreground/background pair below is verified at or above the
- * WCAG AA 4.5:1 for body text in docs/privacy-security.md.
+ * shadows. Text and control colours retain the established accessible teal palette.
+ * The background and decorative surfaces are kept neutral.
  */
 :root {
-  --background: oklch(0.985 0.005 205);
+  --background: oklch(0.975 0.004 235);
   --foreground: oklch(0.24 0.02 235);
 
   --card: oklch(1 0 0);
@@ -117,9 +117,9 @@
   --chart-4: oklch(0.52 0.145 300);
   --chart-5: oklch(0.62 0.028 235);
 
-  --radius: 0.7rem;
+  --radius: 0.6rem;
 
-  --sidebar: oklch(0.978 0.006 205);
+  --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.24 0.02 235);
   --sidebar-primary: oklch(0.47 0.093 199);
   --sidebar-primary-foreground: oklch(0.99 0.005 200);
@@ -141,20 +141,17 @@
 
   body {
     @apply bg-background text-foreground;
-    /* A faint cool wash keeps long dashboard sessions easier on the eyes than
-       flat white, without tinting cards away from white. */
-    background-image:
-      radial-gradient(
-        ellipse 80rem 40rem at 50% -12rem,
-        oklch(0.94 0.03 199 / 0.5),
-        transparent 70%
-      );
-    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
   }
 
   html {
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-foreground);
   }
 
   /* Numerals line up in the metric cards and tables, so changes in a count
@@ -173,6 +170,27 @@
 @layer components {
   /* Landing and confirmation surfaces read as a single calm panel. */
   .surface-panel {
-    @apply rounded-2xl border border-border/80 bg-card shadow-raised;
+    @apply rounded-xl border border-border bg-card shadow-card;
+  }
+
+  .section-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-primary;
+  }
+
+  .patient-brand {
+    @apply flex items-center gap-3 border-b border-border pb-5;
+  }
+
+  .patient-actions {
+    @apply sticky bottom-0 z-10 flex gap-3 border-t border-border bg-background/95 py-4 backdrop-blur-sm;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

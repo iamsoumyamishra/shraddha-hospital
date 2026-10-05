@@ -370,20 +370,19 @@ function MetricCard({
     <Card
       className={cn(
         "relative overflow-hidden",
-        // The primary KPI is tinted so it reads as the headline number without
-        // relying on size alone. The icon repeats that cue for anyone who cannot
-        // distinguish the tint from the card background.
-        emphasis && "border-primary/35 bg-accent/35",
+        // The primary KPI has a teal edge; the larger number and icon also
+        // distinguish it without relying on colour alone.
+        emphasis && "border-primary/20 bg-card ring-primary/20",
       )}
     >
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Icon aria-hidden className="size-4 text-primary" />
+      <CardHeader className="pb-1">
+        <CardTitle className="flex items-center justify-between gap-3 text-xs font-medium text-muted-foreground">
+          <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg border border-primary/10 bg-accent/50 text-primary"><Icon className="size-4" /></span>
           {title}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold tracking-tight tabular-nums">
+        <p className="text-3xl font-semibold tracking-tight tabular-nums lg:text-4xl">
           {value ?? <span className="text-muted-foreground">—</span>}
         </p>
         <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{hint}</p>

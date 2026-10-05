@@ -49,7 +49,7 @@ export function CategoryScoresCard({
     smallSample: string;
   };
 }) {
-  const visible = data.filter((item) => item.score !== null);
+  const visible = data.filter((item) => item.score !== null && !item.suppressed);
 
   return (
     <Card>
@@ -59,20 +59,20 @@ export function CategoryScoresCard({
       </CardHeader>
       <CardContent className="space-y-6">
         {visible.length === 0 ? null : (
-          <div className="h-56 w-full" aria-hidden>
+          <div className="w-full" style={{ height: Math.max(200, visible.length * 40 + 32) }} aria-hidden>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={visible} layout="vertical" margin={{ left: 24, right: 16 }}>
                 <CartesianGrid horizontal={false} stroke="var(--border)" strokeDasharray="3 3" />
                 <XAxis type="number" domain={[0, 100]} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="label" width={140} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                 <Tooltip formatter={(value) => [Number(value).toFixed(1), labels.score]} />
-                <Bar dataKey="score" fill="var(--color-chart-1)" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="score" fill="var(--color-chart-1)" barSize={16} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
 
-        <Table>
+        <Table className="text-xs sm:text-sm">
           <caption className="sr-only">{labels.table}</caption>
           <TableHeader>
             <TableRow>
@@ -159,7 +159,7 @@ export function RatingDistributionCard({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <Table>
+            <Table className="text-xs sm:text-sm">
               <caption className="sr-only">{labels.table}</caption>
               <TableHeader>
                 <TableRow>
@@ -234,7 +234,7 @@ export function TrendCard({
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <Table>
+            <Table className="text-xs sm:text-sm">
               <caption className="sr-only">{labels.table}</caption>
               <TableHeader>
                 <TableRow>

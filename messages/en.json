@@ -238,5 +238,33 @@
   "login": {
     "brandLine": "Staff access",
     "assurance": "Feedback data is limited to the branches and departments you are assigned to."
+  },
+  "ui": {
+    "workspace": "Staff workspace",
+    "navigation": "Workspace",
+    "signedIn": "Signed in as",
+    "skipToContent": "Skip to content",
+    "patientStepsTitle": "A few simple steps",
+    "patientSteps": {
+      "choose": {
+        "title": "Tell us about your visit",
+        "body": "Select the services you used during your visit."
+      },
+      "rate": {
+        "title": "Share your experience",
+        "body": "Rate each service and add a comment if you wish."
+      },
+      "submit": {
+        "title": "Send your feedback",
+        "body": "Submit your responses. Follow-up contact is optional."
+      }
+    },
+    "loginTitle": "Better experiences start with listening.",
+    "loginBody": "Review patient feedback and help your team improve the services that matter.",
+    "loginLabel": "Patient experience platform",
+    "surveyProgress": "Your progress",
+    "surveyHint": "Take your time. Choose “Not applicable” for a question that does not apply to your visit.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   }
 }

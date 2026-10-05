@@ -47,11 +47,11 @@ export function CaseEditor({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-4">
       <div className="space-y-2">
         <Label htmlFor={`case-status-${caseId}`}>{t("status")}</Label>
         <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
-          <SelectTrigger id={`case-status-${caseId}`} className="w-40">
+          <SelectTrigger id={`case-status-${caseId}`} className="h-10! w-full sm:w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -74,7 +74,7 @@ export function CaseEditor({
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           size="sm"
           disabled={pending}

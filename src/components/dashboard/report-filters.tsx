@@ -59,7 +59,7 @@ export function ReportFilters({
 
   return (
     <form
-      className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4"
+      className="grid gap-4 rounded-xl border border-border bg-card p-4 shadow-xs sm:grid-cols-2 sm:p-5 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]"
       onSubmit={(event) => {
         event.preventDefault();
         apply({ from, to, visitType, branchId });
@@ -70,6 +70,7 @@ export function ReportFilters({
         <Input
           id="filter-from"
           type="date"
+          className="h-10 min-w-0 w-full"
           value={from}
           max={to}
           onChange={(event) => apply({ from: event.target.value })}
@@ -81,6 +82,7 @@ export function ReportFilters({
         <Input
           id="filter-to"
           type="date"
+          className="h-10 min-w-0 w-full"
           value={to}
           min={from}
           onChange={(event) => apply({ to: event.target.value })}
@@ -90,7 +92,7 @@ export function ReportFilters({
       <div className="space-y-2">
         <Label htmlFor="filter-visit">{t("filters.visitType")}</Label>
         <Select value={visitType} onValueChange={(value) => apply({ visitType: value })}>
-          <SelectTrigger id="filter-visit">
+          <SelectTrigger id="filter-visit" className="h-10! w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -108,7 +110,7 @@ export function ReportFilters({
         <div className="space-y-2">
           <Label htmlFor="filter-branch">{t("table.branch")}</Label>
           <Select value={branchId} onValueChange={(value) => apply({ branchId: value })}>
-            <SelectTrigger id="filter-branch">
+            <SelectTrigger id="filter-branch" className="h-10! w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -123,8 +125,8 @@ export function ReportFilters({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-4">
-        <Button type="submit" size="sm">
+      <div className="flex items-end gap-2 sm:col-span-2 xl:col-span-1">
+        <Button type="submit" className="w-full xl:w-auto">
           {t("filters.period")}
         </Button>
       </div>

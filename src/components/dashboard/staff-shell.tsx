@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -22,11 +21,14 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import {
+  ChevronRight,
   ClipboardList,
   HeartPulse,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  RefreshCw,
+  ShieldCheck,
   TrendingUp,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -76,9 +78,9 @@ function SidebarNav({
   roleLabel: string;
 }) {
   const t = useTranslations("nav");
-  const tCommon = useTranslations("common");
   const tAuth = useTranslations("auth");
   const tBrand = useTranslations("brand");
+  const tUi = useTranslations("ui");
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
 
@@ -87,18 +89,19 @@ function SidebarNav({
 
   return (
     <>
+      <a href="#staff-content" className="sr-only z-50 rounded-md bg-primary p-3 text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3">{tUi("skipToContent")}</a>
       {/* Sidebar tooltips need their own provider; the rest of the app does not use them. */}
       <TooltipProvider>
       <Sidebar collapsible="icon">
-        <SidebarHeader>
+        <SidebarHeader className="h-20 justify-center px-4 group-data-[collapsible=icon]:px-2">
           <div className="flex items-center gap-2.5 px-1 py-1">
             <span
               aria-hidden
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-raised"
+              className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"
             >
               <HeartPulse className="size-5" />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-sm font-semibold tracking-tight leading-tight">
                 {tBrand("name")}
               </p>
@@ -110,21 +113,23 @@ function SidebarNav({
         </SidebarHeader>
         <Separator />
         <SidebarContent>
-          <SidebarGroup>
+          <SidebarGroup className="px-3 py-6 group-data-[collapsible=icon]:px-2">
+            <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground group-data-[collapsible=icon]:hidden">{tUi("navigation")}</p>
             <SidebarGroupContent>
               {/* A landmark, so a screen reader user can jump straight to the
                   section links instead of tabbing through the whole page. */}
               <nav aria-label={t("label")}>
-                <SidebarMenu>
+                <SidebarMenu className="gap-1.5">
                   {STAFF_NAV.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
+                      className="h-11 rounded-lg px-3 text-sm text-muted-foreground data-[active=true]:bg-accent data-[active=true]:font-semibold data-[active=true]:text-primary"
                       isActive={isActive(item)}
                       tooltip={t(item.key)}
                       onClick={() => setOpenMobile(false)}
                     >
-                      <Link href={item.href}>
+                      <Link href={item.href} aria-current={isActive(item) ? "page" : undefined}>
                         <item.icon aria-hidden />
                         <span>{t(item.key)}</span>
                       </Link>
@@ -136,17 +141,17 @@ function SidebarNav({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="gap-3 border-t border-sidebar-border p-3">
           {/* An initials chip gives the footer a recognisable anchor without
               needing to load an avatar image. */}
-          <div className="flex items-center gap-2.5 rounded-lg bg-accent/50 px-2 py-2">
+          <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/50 px-3 py-3 group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:p-0">
             <span
               aria-hidden
-              className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-primary/15 bg-accent text-xs font-semibold text-primary"
             >
               {initials(displayName)}
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-sm font-medium leading-tight">{displayName}</p>
               <p className="truncate text-xs leading-tight text-muted-foreground">{roleLabel}</p>
             </div>
@@ -154,7 +159,7 @@ function SidebarNav({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                tooltip={tCommon("close")}
+                tooltip={tAuth("signOut")}
                 onClick={() => {
                   void authClient.signOut();
                 }}
@@ -169,19 +174,21 @@ function SidebarNav({
       </TooltipProvider>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur lg:px-6">
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur-sm sm:px-6 lg:h-20 lg:px-8">
           <SidebarTrigger className="-ml-1" />
-          <p className="truncate text-sm font-medium text-muted-foreground">{t("overview")}</p>
-          <div className="ml-auto flex items-center gap-2 lg:hidden">
-            <span
-              aria-hidden
-              className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground"
-            >
-              <HeartPulse className="size-4" />
-            </span>
+          <Separator orientation="vertical" className="h-5!" />
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <span className="hidden text-muted-foreground sm:inline">{tUi("workspace")}</span>
+            <ChevronRight aria-hidden className="hidden size-3.5 text-muted-foreground sm:block" />
+            <span className="truncate font-medium">{t(STAFF_NAV.find(isActive)?.key ?? "overview")}</span>
+          </div>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <ShieldCheck aria-hidden className="hidden size-4 text-primary sm:block" />
+            <span className="hidden text-xs text-muted-foreground md:block">{roleLabel}</span>
+            <span aria-hidden className="grid size-8 place-items-center rounded-full border border-border bg-muted text-xs font-semibold">{initials(displayName)}</span>
           </div>
         </header>
-        <main className="min-w-0 flex-1 p-4 lg:p-6">{children}</main>
+        <main id="staff-content" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1600px] flex-1 p-4 outline-none sm:p-6 lg:p-8">{children}</main>
       </div>
     </>
   );
@@ -210,9 +217,9 @@ export function PageHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{title}</h1>
         {description ? (
           <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
             {description}
@@ -233,6 +240,7 @@ export function RefreshButton() {
   const router = useRouter();
   return (
     <Button variant="outline" size="sm" onClick={() => router.refresh()}>
+      <RefreshCw aria-hidden className="size-3.5" />
       {t("refresh")}
     </Button>
   );
