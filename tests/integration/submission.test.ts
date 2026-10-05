@@ -160,6 +160,71 @@ describe("submitFeedback", () => {
     ).rejects.toBeInstanceOf(SubmissionValidationError);
   });
 
+  it("rejects a submission that omits a required question", async () => {
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const questionIds = survey.questions.map((question) => question.id);
+    const idempotencyKey = randomUUID();
+    const omitted = questionIds[questionIds.length - 1];
+    if (omitted === undefined) throw new Error("Survey has no questions");
+
+    await expect(
+      submitFeedback({
+        surveySlug: PUBLIC_SURVEY_SLUG,
+        idempotencyKey,
+        visitType: "outpatient",
+        servicesUsed: ["reception"],
+        // Every category but the last is answered, so this clears the
+        // four-category threshold. Only one question is absent from the array.
+        answers: answerPayload(questionIds.slice(0, -1), 4),
+      }),
+    ).rejects.toBeInstanceOf(SubmissionValidationError);
+
+    // A rejected submission must leave nothing behind.
+    await expect(prisma.feedbackSubmission.count({ where: { idempotencyKey } })).resolves.toBe(0);
+  });
+
+  it("treats an explicit not-applicable answer as answered rather than missing", async () => {
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const receptionCategory = survey.categories.find((category) => category.key === "reception");
+    const receptionIds = survey.questions
+      .filter((question) => question.categoryId === receptionCategory?.id)
+      .map((question) => question.id);
+
+    // Every question is present in the array; the reception ones are answered
+    // "not applicable", which is a deliberate response rather than an omission.
+    const { acknowledgement } = await submitFeedback({
+      surveySlug: PUBLIC_SURVEY_SLUG,
+      idempotencyKey: randomUUID(),
+      visitType: "outpatient",
+      servicesUsed: ["reception"],
+      answers: survey.questions.map((question) =>
+        receptionIds.includes(question.id)
+          ? { questionId: question.id, rating: null }
+          : { questionId: question.id, rating: 4 },
+      ),
+    });
+
+    expect(acknowledgement.status).toBe("COMPLETE");
+
+    const stored = await prisma.feedbackSubmission.findUniqueOrThrow({
+      where: { publicId: acknowledgement.publicId },
+      select: {
+        status: true,
+        categoryScores: {
+          where: { categoryId: receptionCategory?.id },
+          select: { score: true, answeredCount: true },
+        },
+      },
+    });
+
+    expect(stored.status).toBe("COMPLETE");
+    // A category with no valid answers has no score at all: the row exists but
+    // carries null rather than 0, so it cannot drag the patient index down.
+    expect(stored.categoryScores[0]?.score).toBeNull();
+    expect(stored.categoryScores[0]?.score).not.toBe(0);
+    expect(stored.categoryScores[0]?.answeredCount).toBe(0);
+  });
+
   it("treats not-applicable as excluded rather than zero", async () => {
     const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
     const receptionCategory = survey.categories.find(

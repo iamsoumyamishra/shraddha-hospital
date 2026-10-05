@@ -96,9 +96,14 @@ export async function submitFeedback(
     };
   });
 
-  const answeredQuestionIds = input.answers
-    .filter((answer) => answer.rating !== null)
-    .map((answer) => answer.questionId);
+  // Every entry in `input.answers` is a deliberate response: the schema makes
+  // `rating` required-but-nullable, where null means the respondent explicitly
+  // chose "Not applicable". A question is missing only when it is absent from
+  // the array altogether, so an explicit not-applicable must still count as
+  // answered. Filtering on `rating !== null` here would treat "this does not
+  // apply to me" as "unanswered" and reject those submissions under the
+  // blockOnMissingRequired rule.
+  const answeredQuestionIds = input.answers.map((answer) => answer.questionId);
 
   const scores = computeSubmissionScores({
     // The loader returns `id`/`key`; the scoring function wants the explicit

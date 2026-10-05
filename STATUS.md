@@ -84,7 +84,7 @@ shadcn/ui · Recharts · Vitest + Playwright · pnpm.
 | --- | --- |
 | `pnpm lint` | clean |
 | `pnpm typecheck` | clean |
-| `pnpm test` | 66 passed (47 unit + 19 integration) |
+| `pnpm test` | 68 passed (47 unit + 21 integration) |
 | `pnpm test:e2e` | 28 passed (chromium + mobile-chrome) |
 | `pnpm build` | passed, 13 routes |
 
@@ -95,76 +95,83 @@ auth at all.
 
 ---
 
+## Recently fixed
+
+**The server did not enforce "missing required answers prevent submission",**
+although AGENTS.md §8 states it does. This turned out to be two defects, not
+one:
+
+- **Two policy definitions disagreed.** `POLICY_V1`
+  (`src/modules/scoring/policy.ts:65`) set `blockOnMissingRequired: true` but
+  was read only by unit tests, while the seeded database policy that production
+  actually loads set it `false`. Production reads rules from the database
+  (`submit-feedback.ts` → `survey.scoringPolicy.rules`), so `POLICY_V1` was
+  never consulted at runtime and the rejection path was unreachable. The seed
+  now imports `POLICY_V1` instead of hand-copying the rules, making the constant
+  the single source of truth, and the upsert persists it on update as well as
+  create so an existing development database converges onto it.
+
+- **`answeredQuestionIds` conflated "not applicable" with "unanswered."**
+  `answerInputSchema` makes `rating` required-but-nullable, where `null` means
+  the respondent explicitly chose "Not applicable." The old code filtered on
+  `rating !== null`, which discarded those responses and would have rejected
+  every submission that used the not-applicable option — a documented feature of
+  the survey. A question now counts as missing only when it is absent from the
+  answers array entirely.
+
+Verified against the live API. 4 of 15 answered now returns:
+
+    422 {"error":"invalid_request",
+         "issues":["Required questions were left unanswered, so this
+                    submission cannot be accepted"]}
+
+All 15 present with two marked not-applicable returns `201 COMPLETE`, with the
+reception category excluded from scoring (`score: null`, never `0`).
+
+Covered by two integration tests. The not-applicable one was confirmed to fail
+against the old code before the fix was kept.
+
+---
+
 ## Remaining
 
 ### Functional gaps in shipped code
 
-1. **The server does not enforce "missing required answers block submission",**
-   although AGENTS.md §8 states it does. Two definitions of the same policy
-   disagree:
-
-   | | `blockOnMissingRequired` | used by |
-   | --- | --- | --- |
-   | `POLICY_V1` (`src/modules/scoring/policy.ts:65`) | `true` | unit tests only |
-   | seeded DB policy v1 (`prisma/seed.ts:138`) | `false` | **production** |
-
-   Production reads the rules from the database
-   (`submit-feedback.ts:114` → `survey.scoringPolicy.rules`), so `POLICY_V1` is
-   never consulted at runtime. With `false`, `evaluateCompletion` can never set
-   `blocked: true`, which makes the rejection throw at `submit-feedback.ts:117`
-   unreachable, and `requiredQuestionIds()` (`load-published-survey.ts:146`) is
-   dead code.
-
-   Confirmed empirically against the live API: a POST answering 4 of 15
-   questions returned `201 {"status":"COMPLETE","patientIndex":75}`. The 11 blank
-   required questions were accepted silently. The browser form requires all 15,
-   so the form cannot trigger this — but the endpoint is public, so a crafted
-   request can.
-
-   Knock-on effect: `overview.ts:142` averages `patientIndex` over every
-   `status = 'COMPLETE'` row with no coverage filter, so a 4-question
-   submission counts toward the hospital average exactly like a 15-question
-   one. That is a measurement-integrity problem, not just a validation gap.
-
-   Fix: set the seeded policy to `true`, or apply the rule in
-   `submit-feedback.ts` independent of the stored policy, and gate the index on
-   answered-question coverage.
-
-2. **Viewing a response silently creates a follow-up case.**
+1. **Viewing a response silently creates a follow-up case.**
    `src/app/[locale]/(staff)/dashboard/responses/[submissionId]/page.tsx:49`
    calls `createCase` whenever a manager opens the page. Reading feedback should
    not mutate state. Needs an explicit "Open a follow-up case" action.
 
-3. **Report filters are not applied on the cases page.**
+2. **Report filters are not applied on the cases page.**
    `dashboard`, `dashboard/phi`, and `dashboard/responses` each read
    `searchParams`; `dashboard/cases` does not, so period and scope filters
    silently do nothing there.
 
 ### Not built, and in scope per AGENTS.md
 
-4. **Hindi and Marathi locales.** Only `messages/en.json` exists. AGENTS.md lists
+3. **Hindi and Marathi locales.** Only `messages/en.json` exists. AGENTS.md lists
    English, Hindi, and Marathi as MVP locales with reviewed translations.
-5. **Unique visit invitations.** `PUBLIC_FEEDBACK_MODE` accepts only `"qr"`, so
+4. **Unique visit invitations.** `PUBLIC_FEEDBACK_MODE` accepts only `"qr"`, so
    every response is unverified public-QR feedback. Cryptographically random
    expiring tokens, stored as hashes and consumed atomically, are not implemented.
-6. **Core documentation.** `README.md` is still the 36-line `create-next-app`
+5. **Core documentation.** `README.md` is still the 36-line `create-next-app`
    scaffold and mentions neither this project nor Prisma. Missing per AGENTS.md:
    `architecture.md`, `scoring.md`, `data-model.md`, `api.md`, `localization.md`,
    `privacy-security.md`, `deployment.md`, `roadmap.md`.
-7. **`Dockerfile`.** `docker-compose.yml` exists but there is no image build.
-8. **Seed credentials are undocumented.** `.env.example` lists no
+6. **`Dockerfile`.** `docker-compose.yml` exists but there is no image build.
+7. **Seed credentials are undocumented.** `.env.example` lists no
    `SEED_STAFF_EMAIL` or `SEED_STAFF_PASSWORD`, yet `prisma/seed.ts` reads
    `SEED_STAFF_EMAIL` (defaulting to `admin@shraddha.example`) and refuses to run
    without a password.
 
 ### Housekeeping
 
-9. **AGENTS.md module layout has drifted from the tree.** There is no
+8. **AGENTS.md module layout has drifted from the tree.** There is no
    `modules/identity/` or `modules/cases/`; identity lives in `src/lib/auth.ts`
    and `src/lib/authorization.ts`, and case logic sits in
    `modules/analytics/cases.ts`. `modules/audit/` exists but is not in the
    documented layout.
-10. **Migration history is currently consistent.** `pnpm exec prisma migrate status`
+9. **Migration history is currently consistent.** `pnpm exec prisma migrate status`
    reports `Database schema is up to date!` with no checksum warning. An earlier
    checksum mismatch during development was not reproducible and appears
    resolved. Re-check before every release rather than assuming, and never run

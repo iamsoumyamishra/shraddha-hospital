@@ -4,6 +4,7 @@ import { hashPassword } from "better-auth/crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 import { computeSubmissionScores } from "../src/modules/scoring";
+import { POLICY_V1 } from "../src/modules/scoring/policy";
 import {
   BRANCHES,
   BRANCH_BIAS,
@@ -12,7 +13,6 @@ import {
   DEPARTMENTS,
   HOSPITAL,
   QUESTIONS,
-  RATING_LABELS,
   SERVICES_USED,
   SURVEY,
   VISIT_TYPES,
@@ -124,23 +124,17 @@ async function main(): Promise<void> {
 
   const scoringPolicy = await prisma.scoringPolicyVersion.upsert({
     where: { hospitalId_version: { hospitalId: hospital.id, version: 1 } },
-    update: {},
+    // Persisted here as well as on create so that an existing development
+    // database converges onto the authored policy instead of silently keeping
+    // a stale one. In production a published policy is immutable and a change
+    // would create version 2 with a new survey version pointing at it.
+    update: { rules: POLICY_V1 },
     create: {
       hospitalId: hospital.id,
       version: 1,
       name: "Equal category weights, four-category completion threshold",
       isActive: true,
-      rules: {
-        scale: { min: 1, max: 5, labels: RATING_LABELS },
-        completion: {
-          // Provisional. Confirm against pilot data before publishing widely.
-          minScoredCategories: 4,
-          blockOnMissingRequired: false,
-          allowIncomplete: true,
-        },
-        weights: { mode: "EQUAL_CATEGORY", renormaliseOverAnswered: true },
-        display: { decimals: 1 },
-      },
+      rules: POLICY_V1,
     },
   });
 
@@ -371,16 +365,7 @@ async function seedSubmissions(): Promise<void> {
       answers,
       requiredQuestionIds: questions.map((question) => question.id),
       answeredQuestionIds: answers.map((answer) => answer.questionId),
-      rules: {
-        scale: { min: 1, max: 5, labels: [...RATING_LABELS] },
-        completion: {
-          minScoredCategories: 4,
-          blockOnMissingRequired: false,
-          allowIncomplete: true,
-        },
-        weights: { mode: "EQUAL_CATEGORY", renormaliseOverAnswered: true },
-        display: { decimals: 1 },
-      },
+      rules: POLICY_V1,
     });
 
     const isIncomplete = random() < 0.07;

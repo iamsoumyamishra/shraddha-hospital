@@ -174,14 +174,6 @@ export const QUESTIONS: readonly SeedQuestion[] = [
   },
 ] as const;
 
-export const RATING_LABELS = [
-  "Very dissatisfied",
-  "Dissatisfied",
-  "Neutral",
-  "Satisfied",
-  "Very satisfied",
-] as const;
-
 /**
  * Synthetic rating bias per category key, used to give the seeded dashboards a
  * realistic shape instead of flat noise. Values are mean ratings on the 1-5 scale.
