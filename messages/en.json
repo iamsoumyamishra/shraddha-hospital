@@ -64,6 +64,7 @@
       "privacyConsent": "Please confirm you have read the notice.",
       "services": "Select at least one service.",
       "questions": "Please answer every question. Choose \"Not applicable\" if it does not apply to you.",
+      "overallRating": "Choose an overall rating for your visit.",
       "comment": "Your comment is too long.",
       "contactConsent": "Give contact details only if you agree to be contacted.",
       "submit": "We could not record your feedback. Please try again."

@@ -180,6 +180,13 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
       setError(t("errors.questions"));
       return;
     }
+    // Step 3 holds the standalone overall-experience rating. It was previously
+    // validated nowhere, so a respondent could reach submit without choosing
+    // one even though the server requires it.
+    if (step === 3 && overallRating === null) {
+      setError(t("errors.overallRating"));
+      return;
+    }
     setError(null);
     setStep((current) => Math.min(current + 1, totalSteps - 1));
   }
@@ -426,7 +433,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
               <CardTitle>{t("confirmationIndex")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <fieldset className="space-y-3">
+              <fieldset className="space-y-3" aria-required>
                 <legend className="sr-only">{t("confirmationIndex")}</legend>
                 <RadioGroup
                   value={overallRating === null ? "" : String(overallRating)}
@@ -591,7 +598,11 @@ function QuestionBlock({
     "has-[:checked]:bg-accent has-[:checked]:shadow-card";
 
   return (
-    <fieldset className="space-y-2.5">
+    // Every question must be answered, including an explicit "Not applicable".
+    // aria-required on the group tells assistive technology that leaving the
+    // whole question blank is not an option, which the radio inputs alone
+    // cannot express.
+    <fieldset className="space-y-2.5" aria-required>
       <legend className="mb-1 text-sm font-semibold leading-snug text-pretty">{prompt}</legend>
       <RadioGroup
         value={selected}

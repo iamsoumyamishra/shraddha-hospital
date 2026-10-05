@@ -114,14 +114,29 @@ export async function submitFeedback(
       weight: category.weight,
     })),
     answers: scoredAnswers,
-    requiredQuestionIds: survey.questions.map((question) => question.id),
+    requiredQuestionIds: survey.questions
+      .filter((question) => question.isRequired)
+      .map((question) => question.id),
     answeredQuestionIds,
     rules: survey.scoringPolicy.rules,
   });
 
   if (scores.blocked) {
+    // Name the omitted questions so the caller can tell which ones to revisit.
+    // Counted here rather than reusing the scoring list to keep the module
+    // free of presentation concerns.
+    const answered = new Set(answeredQuestionIds);
+    const missing = survey.questions.filter(
+      (question) => question.isRequired && !answered.has(question.id),
+    );
+    const detail =
+      missing.length === 1
+        ? `Required question not answered: "${missing[0]?.prompt ?? ""}".`
+        : `Required questions not answered (${missing.length}): ${missing
+            .map((question) => `"${question.prompt}"`)
+            .join(", ")}.`;
     throw new SubmissionValidationError([
-      "Required questions were left unanswered, so this submission cannot be accepted",
+      `Required questions were left unanswered, so this submission cannot be accepted. ${detail} Answer every question, or choose "Not applicable" where it does not apply.`,
     ]);
   }
 

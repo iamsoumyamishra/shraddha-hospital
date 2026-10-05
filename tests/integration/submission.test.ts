@@ -24,6 +24,18 @@ function answerPayload(questionIds: string[], rating: number | null = 4) {
   return questionIds.map((questionId) => ({ questionId, rating }));
 }
 
+/**
+ * Fields the server requires on every submission. Spread this into each call so
+ * a test only has to state what it is actually exercising; `servicesUsed` and
+ * `overallRating` are mandatory and each has a dedicated rejection test below.
+ */
+function requiredFields() {
+  return {
+    servicesUsed: ["reception", "consultation"],
+    overallRating: 4,
+  };
+}
+
 describe("submitFeedback", () => {
   beforeAll(async () => {
     await seedSurveyFixture();
@@ -39,6 +51,7 @@ describe("submitFeedback", () => {
     const idempotencyKey = randomUUID();
 
     const { acknowledgement, replayed } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey,
       visitType: "outpatient",
@@ -81,10 +94,10 @@ describe("submitFeedback", () => {
     const questionIds = survey.questions.map((question) => question.id);
     const idempotencyKey = randomUUID();
     const body = {
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey,
       visitType: "outpatient",
-      servicesUsed: ["reception"],
       answers: answerPayload(questionIds, 5),
     };
 
@@ -106,10 +119,10 @@ describe("submitFeedback", () => {
     const questionIds = survey.questions.map((question) => question.id);
     const idempotencyKey = randomUUID();
     const body = {
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey,
       visitType: "outpatient",
-      servicesUsed: ["reception"],
       answers: answerPayload(questionIds, 3),
     };
 
@@ -131,6 +144,7 @@ describe("submitFeedback", () => {
 
     await expect(
       submitFeedback({
+        ...requiredFields(),
         surveySlug: PUBLIC_SURVEY_SLUG,
         idempotencyKey: randomUUID(),
         visitType: "outpatient",
@@ -151,6 +165,7 @@ describe("submitFeedback", () => {
 
     await expect(
       submitFeedback({
+        ...requiredFields(),
         surveySlug: PUBLIC_SURVEY_SLUG,
         idempotencyKey: randomUUID(),
         visitType: "outpatient",
@@ -158,6 +173,56 @@ describe("submitFeedback", () => {
         answers: [...answerPayload(questionIds, 4), { questionId: firstQuestionId, rating: 5 }],
       }),
     ).rejects.toBeInstanceOf(SubmissionValidationError);
+  });
+
+  it("rejects a submission with no services selected", async () => {
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const questionIds = survey.questions.map((question) => question.id);
+
+    // Every question answered, so only the missing service can be the cause.
+    await expect(
+      submitFeedback({
+        ...requiredFields(),
+        surveySlug: PUBLIC_SURVEY_SLUG,
+        idempotencyKey: randomUUID(),
+        visitType: "outpatient",
+        servicesUsed: [],
+        answers: answerPayload(questionIds, 4),
+      }),
+    ).rejects.toThrow(/servicesUsed/);
+  });
+
+  it("rejects a submission with no overall rating", async () => {
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const questionIds = survey.questions.map((question) => question.id);
+
+    await expect(
+      submitFeedback({
+        ...requiredFields(),
+        surveySlug: PUBLIC_SURVEY_SLUG,
+        idempotencyKey: randomUUID(),
+        visitType: "outpatient",
+        answers: answerPayload(questionIds, 4),
+        overallRating: undefined,
+      }),
+    ).rejects.toThrow(/overallRating/);
+  });
+
+  it("names the omitted questions when a required answer is missing", async () => {
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const questionIds = survey.questions.map((question) => question.id);
+    const omitted = survey.questions[0];
+    if (omitted === undefined) throw new Error("Survey has no questions");
+
+    await expect(
+      submitFeedback({
+        ...requiredFields(),
+        surveySlug: PUBLIC_SURVEY_SLUG,
+        idempotencyKey: randomUUID(),
+        visitType: "outpatient",
+        answers: answerPayload(questionIds.slice(1), 4),
+      }),
+    ).rejects.toThrow(new RegExp(omitted.prompt.slice(0, 24).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   });
 
   it("rejects a submission that omits a required question", async () => {
@@ -169,6 +234,7 @@ describe("submitFeedback", () => {
 
     await expect(
       submitFeedback({
+        ...requiredFields(),
         surveySlug: PUBLIC_SURVEY_SLUG,
         idempotencyKey,
         visitType: "outpatient",
@@ -193,6 +259,7 @@ describe("submitFeedback", () => {
     // Every question is present in the array; the reception ones are answered
     // "not applicable", which is a deliberate response rather than an omission.
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey: randomUUID(),
       visitType: "outpatient",
@@ -236,6 +303,7 @@ describe("submitFeedback", () => {
 
     const idempotencyKey = randomUUID();
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey,
       visitType: "outpatient",
@@ -276,6 +344,7 @@ describe("submitFeedback", () => {
     );
 
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey: randomUUID(),
       visitType: "outpatient",
@@ -298,6 +367,7 @@ describe("submitFeedback", () => {
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey: randomUUID(),
       visitType: "outpatient",
@@ -317,6 +387,7 @@ describe("submitFeedback", () => {
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey: randomUUID(),
       visitType: "outpatient",
@@ -344,6 +415,7 @@ describe("submitFeedback", () => {
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey: randomUUID(),
       visitType: "outpatient",
@@ -362,6 +434,7 @@ describe("submitFeedback", () => {
   it("rejects an unknown survey slug", async () => {
     await expect(
       submitFeedback({
+        ...requiredFields(),
         surveySlug: "no-such-survey",
         idempotencyKey: randomUUID(),
         visitType: "outpatient",
@@ -377,6 +450,7 @@ describe("submitFeedback", () => {
 
     await expect(
       submitFeedback({
+        ...requiredFields(),
         surveySlug: PUBLIC_SURVEY_SLUG,
         idempotencyKey: randomUUID(),
         visitType: "outpatient",
@@ -390,6 +464,7 @@ describe("submitFeedback", () => {
     const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
     const questionIds = survey.questions.map((question) => question.id);
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey: randomUUID(),
       visitType: "outpatient",
@@ -418,6 +493,7 @@ describe("submitFeedback", () => {
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
+      ...requiredFields(),
       surveySlug: PUBLIC_SURVEY_SLUG,
       idempotencyKey: randomUUID(),
       visitType: "outpatient",

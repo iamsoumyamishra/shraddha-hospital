@@ -26,6 +26,12 @@ export interface PublishedQuestion {
   categoryKey: string;
   sortOrder: number;
   prompt: string;
+  /**
+   * Whether the respondent must give an answer, including an explicit
+   * "Not applicable". Read from the stored question rather than assumed, so a
+   * later survey version can mark a question optional without a code change.
+   */
+  isRequired: boolean;
 }
 
 export interface PublishedSurvey {
@@ -111,6 +117,7 @@ export async function loadPublishedSurvey(
       categoryKey: category.key,
       sortOrder: question.sortOrder,
       prompt: translation.prompt,
+      isRequired: question.isRequired,
     };
   });
 

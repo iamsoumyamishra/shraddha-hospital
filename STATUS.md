@@ -42,6 +42,28 @@ shadcn/ui · Recharts · Vitest + Playwright · pnpm.
 - Client-supplied scores and tenant identifiers are rejected as authoritative.
 - Rate limited per instance (`RATE_LIMIT_SUBMIT_MAX`).
 
+### Required fields
+Every field below is required by the server, independently of the browser form.
+The form is not the security boundary; a crafted request bypasses it entirely.
+
+| Field | Rule | Server error |
+| --- | --- | --- |
+| every survey question | must appear in `answers`, rated or explicitly `null` for not-applicable | `422`, naming the omitted prompt |
+| `servicesUsed` | at least one entry | `422 servicesUsed: Select at least one service` |
+| `overallRating` | 1–5, not null, not absent | `422 overallRating: Invalid input` |
+| `visitType` | non-empty | `422` |
+| `idempotencyKey` | 16–128 chars | `422` |
+
+Deliberately **optional**, because AGENTS.md requires it: `comment`,
+`followUpConsent`, and the contact details inside it. Optional contact must stay
+optional — that is a privacy requirement, not an oversight.
+
+A question counts as missing only when it is absent from the `answers` array.
+`answerInputSchema` makes `rating` required-but-nullable, where `null` means the
+respondent chose "Not applicable", so a deliberate non-applicable answer is never
+treated as an omission. The required set is read from `Question.isRequired`
+rather than assumed to be every question.
+
 ### Scoring (`src/modules/scoring`)
 - Pure, deterministic, unit-tested: rating→score mapping, category averaging,
   equal category weights with renormalisation over answered categories only,
@@ -84,7 +106,7 @@ shadcn/ui · Recharts · Vitest + Playwright · pnpm.
 | --- | --- |
 | `pnpm lint` | clean |
 | `pnpm typecheck` | clean |
-| `pnpm test` | 68 passed (47 unit + 21 integration) |
+| `pnpm test` | 71 passed (47 unit + 24 integration) |
 | `pnpm test:e2e` | 28 passed (chromium + mobile-chrome) |
 | `pnpm build` | passed, 13 routes |
 

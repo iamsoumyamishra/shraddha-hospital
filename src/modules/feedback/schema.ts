@@ -22,9 +22,16 @@ export const submitFeedbackSchema = z.object({
   surveySlug: z.string().min(1).max(120),
   idempotencyKey: z.string().min(16).max(128),
   visitType: z.string().min(1).max(60),
-  servicesUsed: z.array(z.string().min(1).max(60)).max(12).default([]),
+  // Required: the form asks which services the visit involved, and every
+  // submission must name at least one so coverage can be reported honestly.
+  servicesUsed: z
+    .array(z.string().min(1).max(60))
+    .min(1, "Select at least one service")
+    .max(12),
   respondentRole: z.enum(["PATIENT", "CAREGIVER"]).default("PATIENT"),
-  overallRating: z.number().int().min(1).max(5).nullable().default(null),
+  // The standalone overall-experience rating. Kept out of the calculated index
+  // but still required, so the two measures stay comparable.
+  overallRating: z.number().int().min(1).max(5),
   comment: z.string().trim().max(MAX_COMMENT_LENGTH).nullish(),
   /**
    * Follow-up contact consent is a separate decision from answering the survey,
@@ -36,7 +43,10 @@ export const submitFeedbackSchema = z.object({
       contact: contactInputSchema,
     })
     .nullish(),
-  answers: z.array(answerInputSchema).min(1).max(60),
+  answers: z
+    .array(answerInputSchema)
+    .min(1, "Answer at least one question")
+    .max(60),
 });
 
 export type SubmitFeedbackInput = z.infer<typeof submitFeedbackSchema>;
