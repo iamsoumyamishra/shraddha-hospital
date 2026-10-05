@@ -17,6 +17,9 @@
 # generated prisma client
 /src/generated
 
+# graphify tool cache (regenerable; the report and graph itself are tracked)
+/graphify-out/cache/
+
 # next.js
 /.next/
 /out/
