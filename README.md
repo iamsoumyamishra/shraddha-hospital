@@ -8,6 +8,10 @@ The homepage is an employee portal with a shareable patient form link.
 The main dashboard can download a five-page aggregate patient experience PDF
 for the selected reporting period and authorized scope; see [reports](docs/reports.md).
 
+`pnpm build` checks localization, deploys pending Prisma migrations to `DATABASE_URL`,
+generates the Prisma client, then builds Next.js. The build environment needs
+database connectivity and migration permissions. See [deployment](docs/deployment.md).
+
 ## Local setup
 
 Use pnpm with the committed lockfile. Copy `.env.example` to `.env` and configure

@@ -24,10 +24,23 @@ complete production deployment or multi-tenant provisioning guide.
 
 ## Localization deployment
 
-Apply the additive survey translation migration with `pnpm db:deploy`, then
-regenerate Prisma with `pnpm db:generate` and rebuild. No existing answers or
-scores are changed. Deploy the migration before the new application code because
-survey reads include the new table. Migration rollback requires switching the
+`pnpm build` now runs `pnpm i18n:check`, `pnpm db:deploy` (`prisma migrate deploy`),
+`prisma generate`, and `next build` in that order. A failed review check or
+migration stops the build before compilation. Pending committed migrations are
+applied to the database selected by `DATABASE_URL`; already-applied migrations
+are not reapplied. No development reset, schema push or seeding runs during builds.
+
+Configure `DATABASE_URL` in the deployment build environment, with network access
+to the target PostgreSQL database and a role allowed to apply migrations. Install
+development dependencies during the build so the Prisma CLI is available. This
+also means local and preview builds apply migrations to their configured database;
+use separate development/preview databases rather than the production URL.
+`pnpm db:deploy` remains available for a standalone migration deployment.
+See [Prisma's deployment guidance](https://www.prisma.io/docs/orm/v7/prisma-client/deployment/deploy-database-changes-with-prisma-migrate).
+
+The additive survey translation migration changes no existing answers or scores.
+It runs before the new application build because survey reads include the new
+table. Migration rollback requires switching the
 application back before removing the new table; do not remove published records
 as a routine rollback.
 
