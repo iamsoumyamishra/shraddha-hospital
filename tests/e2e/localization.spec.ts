@@ -53,7 +53,7 @@ test("language switching preserves the complete draft, version and retry key", a
   await page.getByRole("combobox", { name: "Language", exact: true }).selectOption("hi");
   await expect(page.locator('main [role="alert"]')).toContainText("हम आपका फीडबैक दर्ज नहीं कर सके");
   await page.getByRole("button", { name: "फीडबैक भेजें", exact: true }).click();
-  await expect(page.getByText("आपके फीडबैक के लिए धन्यवाद", { exact: true })).toBeVisible();
+  await expect(page.getByText("अपनी प्रतिक्रिया भेजने के लिए धन्यवाद।", { exact: true })).toBeVisible();
   expect(payloads[0]!.idempotencyKey).toBe(payloads[1]!.idempotencyKey);
   expect(payloads[1]!.locale).toBe("hi");
   expect(payloads[1]!.surveyVersionId).toBe(version);
@@ -63,7 +63,8 @@ test("language switching preserves the complete draft, version and retry key", a
   expect(payloads[1]!.followUpConsent).toEqual({ consentGiven: true, contact: { displayName: "Synthetic contact", email: "synthetic@example.test" } });
   // The stable first question ID remains present through both language changes.
   expect(JSON.stringify(payloads[1]!.answers)).toContain(firstQuestionId);
-  await page.getByRole("combobox", { name: "भाषा", exact: true }).selectOption("mr");
-  await expect(page.getByText("तुमच्या अभिप्रायाबद्दल धन्यवाद", { exact: true })).toBeVisible();
+  await expect(page.locator('main [role="status"]')).toHaveText("अपनी प्रतिक्रिया भेजने के लिए धन्यवाद।");
+  await expect(page.getByRole("button")).toHaveCount(0);
+  await expect(page.getByText("75.0", { exact: true })).toHaveCount(0);
   expect(page.url()).not.toContain("synthetic@example");
 });

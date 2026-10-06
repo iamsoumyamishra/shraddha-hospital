@@ -53,7 +53,7 @@ async function completePrivacyAndServices(page: Page) {
 }
 
 test.describe("patient survey", () => {
-  test("completes the survey and returns a confirmation reference", async ({ page }) => {
+  test("completes the survey with only a thank-you confirmation", async ({ page }) => {
     await page.goto(SURVEY_PATH);
 
     await completePrivacyAndServices(page);
@@ -71,11 +71,31 @@ test.describe("patient survey", () => {
     await expect(page.getByText("Step 5 of 5")).toBeVisible();
     await page.getByRole("button", { name: "Submit feedback" }).click();
 
-    await expect(page.getByText("Thank you for your feedback")).toBeVisible();
-    await expect(page.getByText(/Reference [0-9a-f]{20}/)).toBeVisible();
-    await expect(page.getByText("Your overall experience index")).toBeVisible();
-    // 100 / 100 because every question was rated 4, which maps to 75.
-    await expect(page.getByText("75.0")).toBeVisible();
+    await expect(page.getByText("Thank you for submitting your response.")).toBeVisible();
+    const confirmation = page.locator('main [role="status"]');
+    await expect(confirmation).toHaveText("Thank you for submitting your response.");
+    await expect(confirmation).toBeFocused();
+    await expect(page.getByText("Your overall experience index")).toHaveCount(0);
+    await expect(page.getByText("75.0", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button")).toHaveCount(0);
+    await expect(page.getByRole("link")).toHaveCount(0);
+  });
+
+  test("shows only thanks for an incomplete acknowledgement too", async ({ page }) => {
+    await page.goto(SURVEY_PATH);
+    await completePrivacyAndServices(page);
+    await answerAllQuestions(page);
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("radio", { name: "Satisfied", exact: true }).click();
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.route("**/api/feedback/submit", (route) => route.fulfill({
+      status: 201, contentType: "application/json",
+      body: JSON.stringify({ publicId: "synthetic-incomplete-reference", status: "INCOMPLETE", patientIndex: null, displayDecimals: 1 }),
+    }));
+    await page.getByRole("button", { name: "Submit feedback" }).click();
+    await expect(page.locator('main [role="status"]')).toHaveText("Thank you for submitting your response.");
+    await expect(page.getByText(/synthetic-incomplete-reference|not enough were answered/)).toHaveCount(0);
+    await expect(page.getByRole("button")).toHaveCount(0);
   });
 
   test("requires an answer for every question", async ({ page }) => {
@@ -97,7 +117,7 @@ test.describe("patient survey", () => {
     await expect(formAlert(page)).toBeInViewport();
   });
 
-  test("treats not-applicable as excluded rather than as a low score", async ({ page }) => {
+  test("accepts not-applicable answers without displaying a score", async ({ page }) => {
     await page.goto(SURVEY_PATH);
     await completePrivacyAndServices(page);
 
@@ -108,10 +128,10 @@ test.describe("patient survey", () => {
     await page.getByRole("button", { name: "Next" }).click();
     await page.getByRole("button", { name: "Submit feedback" }).click();
 
-    await expect(page.getByText("Thank you for your feedback")).toBeVisible();
-    // Still 75: dropping a category must renormalise the remaining weights
-    // rather than pull the index down.
-    await expect(page.getByText("75.0")).toBeVisible();
+    await expect(page.getByText("Thank you for submitting your response.")).toBeVisible();
+    await expect(page.locator('main [role="status"]')).toHaveText("Thank you for submitting your response.");
+    await expect(page.getByText("75.0", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Share another response" })).toHaveCount(0);
   });
 
   test("blocks the submit when consent is given without contact details", async ({ page }) => {
@@ -141,7 +161,7 @@ test.describe("patient survey", () => {
     // Leave the consent box unticked.
     await page.getByRole("button", { name: "Submit feedback" }).click();
 
-    await expect(page.getByText("Thank you for your feedback")).toBeVisible();
+    await expect(page.getByText("Thank you for submitting your response.")).toBeVisible();
     // Contact fields must never be shown to someone who declined.
     await expect(page.getByLabel("Phone")).toHaveCount(0);
   });

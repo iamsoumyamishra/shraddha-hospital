@@ -53,11 +53,8 @@
     "reviewEdit": "Change",
     "submit": "Submit feedback",
     "submitting": "Submitting",
-    "confirmationTitle": "Thank you for your feedback",
-    "confirmationComplete": "Your feedback has been recorded. Reference {publicId}.",
-    "confirmationIncomplete": "Your answers were saved, but not enough were answered for us to calculate an overall index. Reference {publicId}.",
+    "confirmationTitle": "Thank you for submitting your response.",
     "confirmationIndex": "Your overall experience index",
-    "anotherResponse": "Share another response",
     "errors": {
       "generic": "Something went wrong. Please try again.",
       "rateLimit": "Too many submissions from this device. Please wait a moment and try again.",

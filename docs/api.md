@@ -25,6 +25,11 @@ submissions return `201`, idempotent retries return `200`, and acknowledgements
 retain the existing opaque public reference, completion status and display index.
 No patient data is placed in the language-switch URL.
 
+The patient UI uses the acknowledgement only to show a localized thank-you
+message. It does not display the index, reference or completion status, and has
+no action to start another response. The API contract and staff scoring remain
+unchanged. This UI change does not prevent a new visit to the public QR form.
+
 Legacy clients without a version continue resolving the latest English survey;
 they do not gain the version-pinning guarantees of new clients. This change does
 not add invitations, tenant selection or new reporting filters.

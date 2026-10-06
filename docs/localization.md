@@ -157,6 +157,12 @@ and adding language filters remain future work.
 
 ## Isolated browser verification
 
+After a successful acknowledgement, the form shows only the localized thank-you
+message and announces/focuses the confirmation. No index, reference, language
+selector or repeat-submission action appears on that screen. Earlier language
+switching and error retries remain available. A reload clears volatile state;
+this is not a server-enforced one-response-per-visit restriction.
+
 `tests/e2e/localization.spec.ts` exercises switching English → Hindi → Marathi,
 retaining ratings/services/comment/contact/consent, localized errors, a stable
 survey version and retry key, and localized confirmation. It skips while only

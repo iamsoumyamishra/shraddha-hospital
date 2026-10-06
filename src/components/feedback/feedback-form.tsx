@@ -2,7 +2,7 @@
 
 import { BrandMark } from "@/components/branding/brand-mark";
 import { useEffect, useMemo, useRef } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "cn";
-import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { useFeedbackDraft, type FeedbackDraft } from "./draft-provider";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
@@ -47,7 +47,6 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const tBrand = useTranslations("brand");
   const tUi = useTranslations("ui");
 
-  const locale = useLocale();
   const { draft, setter } = useFeedbackDraft(survey.id, survey.visitTypes[0] ?? "outpatient");
   const { step, privacyAck, visitType, servicesUsed, answers, overallRating, comment, contactConsent, contact, error, submitting, acknowledgement, idempotencyKey } = draft;
   const setStep = setter("step");
@@ -62,7 +61,6 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const setError = setter("error");
   const setSubmitting = setter("submitting");
   const setAcknowledgement = setter("acknowledgement");
-  const setIdempotencyKey = setter("idempotencyKey");
 
   const grouped = useMemo(() => {
     const byCategory = new Map<string, typeof survey.questions>();
@@ -100,62 +98,20 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
     node.focus({ preventScroll: true });
   }, [error]);
 
+  const confirmationRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (acknowledgement) confirmationRef.current?.focus();
+  }, [acknowledgement]);
+
   if (acknowledgement) {
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex justify-end"><LanguageSwitcher locales={survey.availableLocales} surveyVersionId={survey.id} /></div>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <CheckCircle2 aria-hidden className="size-5 text-primary" />
+      <Card ref={confirmationRef} role="status" tabIndex={-1} className="outline-none">
+        <CardHeader className="py-8">
+          <CardTitle role="heading" aria-level={1} className="flex items-center gap-3 text-xl">
+            <CheckCircle2 aria-hidden className="size-6 shrink-0 text-primary" />
             {t("confirmationTitle")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground">
-            {acknowledgement.status === "COMPLETE"
-              ? t("confirmationComplete", { publicId: acknowledgement.publicId })
-              : t("confirmationIncomplete", { publicId: acknowledgement.publicId })}
-          </p>
-          {acknowledgement.patientIndex !== null ? (
-            <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">{t("confirmationIndex")}</p>
-              <p className="text-3xl font-semibold tabular-nums">
-                {new Intl.NumberFormat(locale, { minimumFractionDigits: acknowledgement.displayDecimals, maximumFractionDigits: acknowledgement.displayDecimals }).format(acknowledgement.patientIndex)}
-                <span className="text-base font-normal text-muted-foreground"> / 100</span>
-              </p>
-            </div>
-          ) : null}
-          <aside className="flex items-start gap-3 rounded-lg border border-warning/60 bg-warning/45 p-4 text-sm">
-            <TriangleAlert
-              aria-hidden
-              className="mt-0.5 size-4 shrink-0 text-warning-foreground"
-            />
-            <div className="space-y-1">
-              <p className="font-semibold text-warning-foreground">{tBrand("emergencyLabel")}</p>
-              <p className="text-foreground/85">{tBrand("emergencyBody")}</p>
-            </div>
-          </aside>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              setAcknowledgement(null);
-              setStep(0);
-              setAnswers({});
-              setServicesUsed([]);
-              setComment("");
-              setContactConsent(false);
-              setContact({ displayName: "", phone: "", email: "" });
-              setOverallRating(null);
-              setError(null);
-              setPrivacyAck(false);
-              setVisitType(survey.visitTypes[0] ?? "outpatient");
-              setIdempotencyKey(crypto.randomUUID());
-            }}
-          >
-            {t("anotherResponse")}
-          </Button>
-        </CardContent>
       </Card>
     );
   }
