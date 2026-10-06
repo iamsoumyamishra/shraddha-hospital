@@ -21,6 +21,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
   const survey = surveys.find((item) => item.id === selected);
   const [draft, setDraft] = useState<SurveyDraftInput | null>(survey?.draft ?? null);
   const [language, setLanguage] = useState<"en" | "hi" | "mr">("en");
+  const [questionLanguages, setQuestionLanguages] = useState<Record<string, "en" | "hi" | "mr">>({});
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
   }, [dirty]);
 
   function select(id: string) {
-    setSelected(id); setDraft(surveys.find((item) => item.id === id)?.draft ?? null); setError(null); setNotice(null); setAiFeedback(null);
+    setQuestionLanguages({}); setSelected(id); setDraft(surveys.find((item) => item.id === id)?.draft ?? null); setError(null); setNotice(null); setAiFeedback(null);
   }
 
   async function perform(action: "clone" | "save" | "publish") {
@@ -58,6 +59,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
       const updated = result.survey;
       setSurveys((current) => [updated, ...current.filter((item) => item.id !== updated.id)]);
       setSelected(updated.id); setDraft(updated.draft); setConfirmPublish(false);
+      if (action !== "save") setQuestionLanguages({});
       setNotice(action === "publish" ? `Version ${updated.version} is published. New patient links use this version; existing responses remain unchanged.`
         : action === "clone" ? `Draft version ${updated.version} is ready to edit.` : "Draft saved. Patients continue to see the published version.");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to update the survey."); }
@@ -74,7 +76,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
       const result = await response.json() as { translation?: string; error?: string };
       if (!response.ok || !result.translation) throw new Error(result.error ?? "Unable to translate this question.");
       setDraft((current) => current && ({ ...current, questions: current.questions.map((item) => item.key === key ? { ...item, prompts: { ...item.prompts, [locale]: result.translation! } } : item) }));
-      setLanguage(locale);
+      setQuestionLanguages((current) => ({ ...current, [key]: locale }));
       setAiFeedback({ key, text: `AI ${locale === "hi" ? "Hindi" : "Marathi"} draft added. Review the wording, then save the draft.`, error: false });
     } catch (caught) {
       setAiFeedback({ key, text: caught instanceof Error ? caught.message : "Unable to translate this question.", error: true });
@@ -136,14 +138,16 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
 
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div><h2 className="text-lg font-semibold">Question wording</h2><p className="text-sm text-muted-foreground">Each question uses the existing 1–5 satisfaction scale.</p></div>
-          <div className="space-y-2"><Label htmlFor="question-language">Language</Label><select id="question-language" className="h-10 rounded-md border border-input bg-background px-3 text-sm" disabled={busy} value={language} onChange={(event) => setLanguage(event.target.value as typeof language)}>
+          <div className="space-y-2"><Label htmlFor="question-language">Language</Label><select id="question-language" className="h-10 rounded-md border border-input bg-background px-3 text-sm" disabled={busy} value={language} onChange={(event) => { setLanguage(event.target.value as typeof language); setQuestionLanguages({}); }}>
             <option value="en">English</option><option value="hi">हिन्दी · Hindi draft</option><option value="mr">मराठी · Marathi draft</option>
           </select></div>
         </div>
         {language !== "en" && <p className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">These are translation drafts. Publishing this survey releases English only. The complete {language === "hi" ? "Hindi" : "Marathi"} survey and interface still need human review before patients can select them.</p>}
 
         <div className="space-y-4">
-          {draft.questions.map((question, index) => <Card key={question.key}>
+          {draft.questions.map((question, index) => {
+            const questionLanguage = questionLanguages[question.key] ?? language;
+            return <Card key={question.key}>
             <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
               <CardTitle className="text-base">Question {index + 1}</CardTitle>
               {editable && <div className="flex items-center gap-1">
@@ -169,10 +173,14 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
               </div>}
               {translating?.key === question.key && <p role="status" className="text-sm text-muted-foreground">Generating a {translating.locale === "hi" ? "Hindi" : "Marathi"} draft from English…</p>}
               {aiFeedback?.key === question.key && <p role={aiFeedback.error ? "alert" : "status"} className={aiFeedback.error ? "text-sm text-destructive" : "text-sm text-primary"}>{aiFeedback.text}</p>}
-              <div className="space-y-2"><Label htmlFor={`prompt-${question.key}`}>{language === "en" ? "English question" : language === "hi" ? "Hindi question" : "Marathi question"}</Label>
-                <Textarea id={`prompt-${question.key}`} lang={language} maxLength={1000} rows={3} value={question.prompts[language]} disabled={!editable || busy}
-                  onChange={(event) => updateQuestion(index, { prompts: { ...question.prompts, [language]: event.target.value } })} />
-                {language !== "en" && <p className="text-sm text-muted-foreground">English: {question.prompts.en || "Add the English wording first."}</p>}
+              <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor={`prompt-${question.key}`}>{questionLanguage === "en" ? "English question" : questionLanguage === "hi" ? "Hindi question" : "Marathi question"}</Label>
+                <select aria-label={`Display language for question ${index + 1}`} className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={questionLanguage} disabled={busy}
+                  onChange={(event) => setQuestionLanguages((current) => ({ ...current, [question.key]: event.target.value as typeof language }))}>
+                  <option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option>
+                </select></div>
+                <Textarea id={`prompt-${question.key}`} lang={questionLanguage} maxLength={1000} rows={3} value={question.prompts[questionLanguage]} disabled={!editable || busy}
+                  onChange={(event) => updateQuestion(index, { prompts: { ...question.prompts, [questionLanguage]: event.target.value } })} />
+                {questionLanguage !== "en" && <p className="text-sm text-muted-foreground">English: {question.prompts.en || "Add the English wording first."}</p>}
               </div>
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div className="w-full space-y-2 sm:max-w-xs"><Label htmlFor={`category-${question.key}`}>Service category</Label>
@@ -182,10 +190,10 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
                 <p className="text-xs text-muted-foreground">Required · “Not applicable” allowed</p>
               </div>
             </CardContent>
-          </Card>)}
+          </Card>; })}
         </div>
         {editable && <Button variant="outline" className="min-h-12 w-full border-dashed" disabled={busy || draft.questions.length >= 60} onClick={() => {
-          setLanguage("en"); setDraft({ ...draft, questions: [...draft.questions, { key: `q_${createFeedbackIdempotencyKey().replaceAll("-", "")}`, categoryKey: survey.categories[0]!.key, prompts: { en: "", hi: "", mr: "" } }] });
+          setLanguage("en"); setQuestionLanguages({}); setDraft({ ...draft, questions: [...draft.questions, { key: `q_${createFeedbackIdempotencyKey().replaceAll("-", "")}`, categoryKey: survey.categories[0]!.key, prompts: { en: "", hi: "", mr: "" } }] });
         }}><Plus aria-hidden className="size-4" />Add question</Button>}
       </div>
 

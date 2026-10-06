@@ -16,6 +16,9 @@ describe("Gemini question translation", () => {
     expect(options.headers["x-goog-api-key"]).toBe("synthetic-key");
     expect(options.cache).toBe("no-store");
     const body = JSON.parse(options.body);
+    expect(body.systemInstruction.parts[0].text).toContain("You are strictly a translator");
+    expect(body.systemInstruction.parts[0].text).toContain("NEVER answer it");
+    expect(body.generationConfig.responseJsonSchema.properties.translation.description).toContain("Never answer the question");
     expect(body.generationConfig.responseMimeType).toBe("application/json");
     expect(body.generationConfig.responseJsonSchema.required).toEqual(["translation"]);
     expect(JSON.parse(body.contents[0].parts[0].text)).toEqual({ targetLanguage: locale === "hi" ? "Hindi" : "Marathi", englishQuestion: "Was reception helpful?" });

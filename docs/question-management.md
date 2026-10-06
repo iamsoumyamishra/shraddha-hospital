@@ -29,7 +29,12 @@ confirmation; reloading or closing a dirty page triggers a browser warning.
 
 Each editable question has an **AI Translate** dropdown with Hindi and Marathi.
 It uses the current English wording, including unsaved edits, and fills only the
-chosen language. Existing wording requires confirmation before replacement.
+chosen language of that question. Its preview switches to the translated language
+without switching other questions or the shared language selector. Each question
+also has its own display-language selector for reviewing source and target text. Explicitly
+choosing the shared Language selector resets all previews to that language.
+Gemini is instructed to act strictly as a translator, preserving a question as
+a question and adding no answers or commentary. Existing wording requires confirmation before replacement.
 Generated text stays unsaved until **Save draft**; it needs human review and does
 not enable a patient language. While translating, editing is paused to prevent
 late results overwriting newer changes. Errors preserve existing text.
