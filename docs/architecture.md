@@ -1,5 +1,9 @@
 # Current architecture
 
+Dashboard PDF reports use a lazily loaded client-side jsPDF/canvas renderer and
+the existing authorized aggregate snapshot. They add no backend endpoint or
+schema. See [reports](reports.md) for scope, page limits and accessibility limits.
+
 One Next.js App Router application uses PostgreSQL/Prisma for feedback and
 Better Auth for staff identity. Patient routes and protected staff routes share
 the application; server modules own scoring, persistence and authorization.

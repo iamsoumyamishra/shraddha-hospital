@@ -5,6 +5,8 @@ reporting, using React, TypeScript, Tailwind/shadcn, next-intl, Prisma/PostgreSQ
 and Better Auth. The public QR survey records ratings, optional comments and
 separately consented contact details; the server calculates the experience index.
 The homepage is an employee portal with a shareable patient form link.
+The main dashboard can download a five-page aggregate patient experience PDF
+for the selected reporting period and authorized scope; see [reports](docs/reports.md).
 
 ## Local setup
 

@@ -14,6 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeading, RefreshButton } from "@/components/dashboard/staff-shell";
+import { DownloadReportButton } from "@/components/dashboard/download-report-button";
+import { getHospitalName } from "@/lib/branding";
+import { HOSPITAL_TIMEZONE } from "@/modules/analytics/date-range";
 import { ReportFilters } from "@/components/dashboard/report-filters";
 import {
   CategoryScoresCard,
@@ -55,6 +58,7 @@ export default async function MainDashboardPage({
   const t = await getTranslations("dashboard");
   const tNav = await getTranslations("nav");
   const tResponses = await getTranslations("responses");
+  const tReport = await getTranslations("report");
   const format = await getFormatter();
 
   const staff = await requireStaffPage();
@@ -119,7 +123,42 @@ export default async function MainDashboardPage({
       <PageHeading
         title={t("title")}
         description={t("subtitle")}
-        action={<RefreshButton />}
+        action={<div className="flex flex-wrap items-start gap-2">
+          <RefreshButton />
+          <DownloadReportButton data={{
+            hospitalName: getHospitalName(),
+            from: fromDate,
+            to: boundedToDate,
+            timeZone: HOSPITAL_TIMEZONE,
+            computedAt: report.computedAt.toISOString(),
+            scopeLabel: scope.departmentId
+              ? tReport("departmentScope")
+              : branches.find((branch) => branch.id === (branchId ?? scope.branchId))?.name
+                ?? tReport("hospitalScope"),
+            visitType: filter.visitType ?? t("filters.allVisitTypes"),
+            averageIndex: report.averageIndex,
+            completedCount: report.completedCount,
+            totalCount: report.totalCount,
+            incompleteCount: report.incompleteCount,
+            sampleThreshold: SMALL_SAMPLE_THRESHOLD,
+            categories: categoryData.filter((row) => row.responseCount > 0).map((row) => ({
+              label: row.label, score: row.suppressed ? null : row.score,
+              responseCount: row.responseCount, suppressed: row.suppressed,
+            })),
+            distribution: report.distribution,
+            // The existing weekly query does not apply department or optional
+            // branch filters. Omit its data in those views rather than widen an export.
+            trendAvailable: !scope.departmentId && !branchId,
+            trend: !scope.departmentId && !branchId ? report.trend.map((row) => ({
+              ...row, averageIndex: row.completedCount < SMALL_SAMPLE_THRESHOLD ? null : row.averageIndex,
+            })) : [],
+            branches: report.branches.map((row) => ({
+              name: row.name, averageIndex: row.suppressed ? null : row.averageIndex,
+              completedCount: row.completedCount, suppressed: row.suppressed,
+            })),
+            visitTypes: report.visitTypes,
+          }} />
+        </div>}
       />
 
       <ReportFilters

@@ -1,5 +1,9 @@
 # Localization progress
 
+Implemented: a dashboard download button and five-page aggregate PDF report for
+the selected period and authorized scope. See [reports](reports.md) for row limits,
+restricted weekly-trend exclusions and the remaining server-audit/accessibility work.
+
 Implemented: next-intl candidate locales and native selectors, complete Hindi
 and Marathi AI draft catalogs, versioned survey draft templates, source revision
 tracking, review checks in builds/runtime, optional Google Cloud Translation draft adapter,

@@ -1,5 +1,10 @@
 # Localization privacy boundary
 
+Dashboard PDFs contain aggregate display data only, excluding patient comments,
+contacts and response IDs. Generation is local to the authenticated browser;
+downloads are not server-audited and must be shared only with authorized staff.
+See [reports](reports.md) for suppression and scope limits.
+
 Google Cloud Translation is disabled by default and is invoked only by the operator translation
 command. Its input is allowlisted public interface/survey text. Comments, answers,
 contacts and tokens are never passed to the adapter. Translation credentials are

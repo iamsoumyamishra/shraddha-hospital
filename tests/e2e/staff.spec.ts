@@ -78,6 +78,16 @@ test.describe("staff authentication", () => {
     expect(fromValue < toValue).toBe(true);
   });
 
+  test("downloads a report for the selected dashboard period", async ({ page }) => {
+    await signIn(page, "admin@shraddha.example", PASSWORD!);
+    await page.goto("/en/dashboard?from=2020-01-01&to=2020-01-31");
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download report", exact: true }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("hospital-experience-report-2020-01-01-2020-01-31.pdf");
+    await expect(page.getByRole("button", { name: "Download report", exact: true })).toBeEnabled();
+  });
+
   test("never reports a zero for a category with no responses", async ({ page }) => {
     await signIn(page, "admin@shraddha.example", PASSWORD!);
     await page.goto("/en/dashboard/phi");

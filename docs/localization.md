@@ -131,6 +131,9 @@ live translations have not been verified. Follow Google's
 
 ## Availability and switching
 
+Dashboard PDF strings are included in the interface catalogs and inherit the
+same review gate. Browser canvas shaping preserves Devanagari wording and
+hospital names; PDF pages are raster images. See [reports](reports.md).
 
 `HOSPITAL_ENABLED_LOCALES=en,hi,mr` requests locales, but cannot bypass review.
 English stays available as fallback. `HOSPITAL_DEFAULT_LOCALE` chooses the
