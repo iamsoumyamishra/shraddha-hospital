@@ -1,14 +1,16 @@
 import { getHospitalName } from "@/lib/branding";
 import type { Metadata } from "next";
 import { Noto_Sans_Devanagari, Plus_Jakarta_Sans } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
+import { FeedbackDraftProvider } from "@/components/feedback/draft-provider";
+import { TEXT_DIRECTION, isLocale } from "@/i18n/catalog";
 import "./globals.css";
 
 /*
  * Plus Jakarta Sans for Latin: a geometric humanist face that reads as calm and
  * modern rather than corporate, and holds up at the large sizes used for metric
- * values. Noto Sans Devanagari covers Hindi and Marathi, which are the reviewed
- * locales after English, so switching language never falls back to a system font.
+ * values. Noto Sans Devanagari covers the candidate Hindi and Marathi locales,
+ * whose translations need review before publication.
  *
  * The variables are deliberately not named `--font-sans`, because Tailwind's
  * theme block maps that name to itself and a self-reference silently drops the
@@ -39,19 +41,19 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
   return (
     <html
-      lang="en"
-      dir="ltr"
+      lang={locale}
+      dir={isLocale(locale) ? TEXT_DIRECTION[locale] : "ltr"}
       className={`${latin.variable} ${devanagari.variable} h-full`}
       suppressHydrationWarning
     >
       <body className="min-h-full bg-background text-foreground antialiased">
-        {/* Client components (the survey form, sidebar, editors) read interface
-            strings through this provider. Locale, messages and timezone are
-            inherited from the request config. */}
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        {/* This provider remains mounted above locale navigation. Interface
+            messages are provided separately by the locale layout. */}
+        <FeedbackDraftProvider>{children}</FeedbackDraftProvider>
       </body>
     </html>
   );

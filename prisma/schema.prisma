@@ -232,11 +232,7 @@ model SurveyVersion {
   title                  String
   description            String?
   visitTypes             String[]
-  /// Patient-facing survey chrome for this version: the services-used options
-  /// and the category headings shown above grouped questions. Stored with the
-  /// version so an edit creates v2 rather than silently changing a published
-  /// survey. Simplified for the focused core; a proper translation table per
-  /// category and service is the follow-up if the structure grows.
+  /// English source wording. Reviewed locale bundles live in SurveyTranslation.
   patientPresentation    Json                @default("{}")
   status                 SurveyStatus @default(DRAFT)
   scoringPolicyVersionId String       @db.Uuid
@@ -248,11 +244,30 @@ model SurveyVersion {
   categories           Category[]
   questions            Question[]
   submissions          FeedbackSubmission[]
+  translations         SurveyTranslation[]
 
   @@unique([hospitalId, slug, version])
   @@index([hospitalId, slug, status])
   @@index([scoringPolicyVersionId])
   @@map("survey_versions")
+}
+
+/// Version-pinned public wording, including service/category/scale labels.
+model SurveyTranslation {
+  id              String            @id @default(uuid()) @db.Uuid
+  surveyVersionId String            @db.Uuid
+  locale          String
+  content         Json
+  sourceHash      String
+  translationHash String
+  status          TranslationStatus @default(DRAFT)
+  reviewedBy      String?
+  reviewedAt      DateTime?         @db.Timestamptz(3)
+  createdAt       DateTime          @default(now()) @db.Timestamptz(3)
+  surveyVersion   SurveyVersion     @relation(fields: [surveyVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyVersionId, locale])
+  @@map("survey_translations")
 }
 
 model Category {

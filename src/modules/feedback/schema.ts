@@ -20,6 +20,9 @@ export const contactInputSchema = z.object({
 
 export const submitFeedbackSchema = z.object({
   surveySlug: z.string().min(1).max(120),
+  // Optional only for compatibility with existing English QR clients. New forms pin the version.
+  surveyVersionId: z.string().uuid().optional(),
+  locale: z.enum(["en", "hi", "mr"]).default("en"),
   idempotencyKey: z.string().min(16).max(128),
   visitType: z.string().min(1).max(60),
   // Required: the form asks which services the visit involved, and every

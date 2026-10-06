@@ -37,7 +37,7 @@ export default defineConfig({
     {
       name: "mobile-chrome",
       use: { ...devices["Pixel 7"] },
-      testMatch: /patient\.spec\.ts/,
+      testMatch: /(?:patient|localization)\.spec\.ts/,
     },
   ],
 

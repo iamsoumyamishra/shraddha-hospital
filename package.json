@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "pnpm i18n:check && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -18,7 +18,12 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "i18n:check": "tsx scripts/i18n/messages.ts check",
+    "i18n:verify": "tsx scripts/i18n/verify-provider.ts",
+    "i18n:sync": "tsx scripts/i18n/messages.ts sync",
+    "i18n:review": "tsx scripts/i18n/messages.ts review",
+    "i18n:survey": "tsx scripts/i18n/survey.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

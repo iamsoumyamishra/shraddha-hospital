@@ -1,5 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
+import { getLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -94,7 +95,7 @@ export async function requireStaffContext(): Promise<StaffContext> {
 export async function requireStaffPage(): Promise<StaffContext> {
   const context = await getStaffContext();
   if (!context) {
-    redirect("/login");
+    redirect(`/${await getLocale()}/login`);
   }
   return context;
 }

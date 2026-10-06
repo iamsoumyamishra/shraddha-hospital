@@ -1,3 +1,5 @@
+import { z } from "zod";
+import type { Locale } from "@/i18n/catalog";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { loadPublishedSurvey, SurveyNotFoundError, TranslationNotPublishedError } from "@/modules/survey/load-published-survey";
@@ -7,15 +9,20 @@ export const dynamic = "force-dynamic";
 
 export default async function FeedbackSurveyPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; surveySlug: string }>;
+  searchParams: Promise<{ version?: string | string[] }>;
 }) {
   const { locale, surveySlug } = await params;
   setRequestLocale(locale);
 
+  const { version } = await searchParams;
+  if (version !== undefined && !z.string().uuid().safeParse(version).success) notFound();
+
   let survey: Awaited<ReturnType<typeof loadPublishedSurvey>>;
   try {
-    survey = await loadPublishedSurvey(surveySlug, locale);
+    survey = await loadPublishedSurvey(surveySlug, locale, version as string | undefined);
   } catch (error) {
     if (error instanceof SurveyNotFoundError || error instanceof TranslationNotPublishedError) {
       notFound();
@@ -27,6 +34,10 @@ export default async function FeedbackSurveyPage({
     <main className="mx-auto w-full max-w-3xl px-5 py-6 sm:px-8 sm:py-10">
       <FeedbackForm
         survey={{
+          id: survey.id,
+          locale: locale as Locale,
+          availableLocales: survey.availableLocales,
+          visitTypeLabels: survey.visitTypeLabels,
           slug: survey.slug,
           title: survey.title,
           description: survey.description,
@@ -40,7 +51,7 @@ export default async function FeedbackSurveyPage({
             sortOrder: question.sortOrder,
             prompt: question.prompt,
           })),
-          ratingScale: survey.scoringPolicy.rules.scale,
+          ratingScale: { ...survey.scoringPolicy.rules.scale, labels: survey.ratingLabels },
         }}
       />
     </main>

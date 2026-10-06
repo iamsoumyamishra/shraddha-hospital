@@ -1,3 +1,4 @@
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { BrandMark } from "@/components/branding/brand-mark";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
@@ -18,7 +19,7 @@ export default async function StaffLoginPage({
   // Already signed in: no reason to show the form again.
   const staff = await getStaffContext();
   if (staff) {
-    redirect("/dashboard");
+    redirect(`/${locale}/dashboard`);
   }
 
   const t = await getTranslations("auth");
@@ -52,6 +53,7 @@ export default async function StaffLoginPage({
           </p>
         </section>
         <div className="flex flex-col justify-center p-6 sm:p-10 lg:p-12">
+          <div className="mb-5 flex justify-end"><LanguageSwitcher /></div>
           <p className="section-eyebrow">{tLogin("brandLine")}</p>
           <div className="mt-3 mb-8 space-y-2">
             <h2 className="text-2xl font-semibold tracking-tight">{t("signInTitle")}</h2>

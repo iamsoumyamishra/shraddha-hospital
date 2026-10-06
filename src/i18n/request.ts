@@ -1,10 +1,11 @@
 import { getHospitalName } from "@/lib/branding";
 import { getRequestConfig } from "next-intl/server";
 import { defaultLocale, isLocale } from "./routing";
+import { getEnabledLocales } from "./availability";
 
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
-  const locale = requested && isLocale(requested) ? requested : defaultLocale;
+  const locale = requested && isLocale(requested) && getEnabledLocales().includes(requested) ? requested : defaultLocale;
 
   const messages = (await import(`../../messages/${locale}.json`)).default;
   const hospitalName = getHospitalName();

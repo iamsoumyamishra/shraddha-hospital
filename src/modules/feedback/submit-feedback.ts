@@ -53,7 +53,7 @@ export async function submitFeedback(
 
   // Survey version and hospital come from trusted server data keyed by the slug.
   // Nothing about tenant, weighting or policy is taken from the request body.
-  const survey = await loadPublishedSurvey(input.surveySlug, "en");
+  const survey = await loadPublishedSurvey(input.surveySlug, input.locale, input.surveyVersionId);
   const surveyRow = await prisma.surveyVersion.findUniqueOrThrow({
     where: { id: survey.id },
     select: { hospitalId: true },

@@ -320,5 +320,9 @@
       "error": "The link could not be copied. Open the form and copy its address from your browser."
     },
     "footer": "Patient experience feedback and reporting"
+  },
+  "language": {
+    "label": "Language",
+    "switching": "Changing language…"
   }
 }

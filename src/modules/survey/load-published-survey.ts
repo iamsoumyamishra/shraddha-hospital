@@ -3,20 +3,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { scoringPolicyRulesSchema, type ScoringPolicyRules } from "@/modules/scoring";
 import type { Rating } from "@/modules/scoring";
+import { presentationSchema, surveySourceMessages } from "./localization";
+import { isReviewed, type TranslationReview } from "@/i18n/translation-workflow";
+import { getEnabledLocales } from "@/i18n/availability";
+import type { Locale } from "@/i18n/catalog";
 
-/**
- * Patient-facing survey chrome stored with the survey version.
- *
- * Keys are language-independent; the labels are the reviewed wording that ships
- * with this version.
- */
-const presentationSchema = z.object({
-  services: z
-    .array(z.object({ key: z.string().min(1), label: z.string().min(1) }))
-    .max(30),
-  categoryLabels: z.record(z.string(), z.string()),
-});
-
+/** Stable service/category identifiers with locale-specific public labels. */
 export type SurveyPresentation = z.infer<typeof presentationSchema>;
 
 export interface PublishedQuestion {
@@ -43,6 +35,9 @@ export interface PublishedSurvey {
   visitTypes: string[];
   locale: string;
   presentation: SurveyPresentation;
+  visitTypeLabels: Record<string, string>;
+  ratingLabels: string[];
+  availableLocales: Locale[];
   categories: {
     id: string;
     key: string;
@@ -81,17 +76,27 @@ export class TranslationNotPublishedError extends Error {
 export async function loadPublishedSurvey(
   slug: string,
   locale: string,
+  versionId?: string,
 ): Promise<PublishedSurvey> {
+  // A pinned UUID must stay within the hospital selected by trusted public
+  // survey configuration. Ambiguous cross-hospital slugs fail closed.
+  const hospitalSlug = process.env.PUBLIC_SURVEY_HOSPITAL_SLUG?.trim();
+  const scopes = await prisma.surveyVersion.findMany({
+    where: { slug, status: "PUBLISHED", ...(hospitalSlug ? { hospital: { slug: hospitalSlug } } : {}) },
+    select: { hospitalId: true }, distinct: ["hospitalId"], take: 2,
+  });
+  if (scopes.length !== 1) throw new SurveyNotFoundError(slug);
   const survey = await prisma.surveyVersion.findFirst({
-    where: { slug, status: "PUBLISHED" },
+    where: { slug, hospitalId: scopes[0]!.hospitalId, status: "PUBLISHED", ...(versionId ? { id: versionId } : {}) },
     orderBy: { version: "desc" },
     include: {
       scoringPolicyVersion: true,
+      translations: { where: { status: "PUBLISHED" } },
       categories: { orderBy: { sortOrder: "asc" } },
       questions: {
         orderBy: { sortOrder: "asc" },
         include: {
-          translations: { where: { locale, status: "PUBLISHED" } },
+          translations: { where: { locale: "en", status: "PUBLISHED" } },
         },
       },
     },
@@ -100,6 +105,27 @@ export async function loadPublishedSurvey(
   if (!survey) {
     throw new SurveyNotFoundError(slug);
   }
+
+  const presentation = presentationSchema.parse(survey.patientPresentation);
+  const rules = scoringPolicyRulesSchema.parse(survey.scoringPolicyVersion.rules);
+  const source = surveySourceMessages({ title: survey.title, description: survey.description,
+    visitTypes: survey.visitTypes, presentation, ratingLabels: rules.scale.labels,
+    questions: survey.questions.map((question) => {
+      const english = question.translations[0];
+      if (!english) throw new TranslationNotPublishedError(question.id, "en");
+      return { key: question.key, prompt: english.prompt };
+    }) });
+  const enabled = getEnabledLocales();
+  const published = survey.translations.filter((entry) => {
+    const target = z.record(z.string(), z.string()).safeParse(entry.content);
+    return target.success && isReviewed(source, target.data, {
+      sourceHash: entry.sourceHash, translationHash: entry.translationHash,
+      reviewedBy: entry.reviewedBy ?? "", reviewedAt: entry.reviewedAt?.toISOString() ?? "",
+    } satisfies TranslationReview);
+  });
+  const availableLocales = enabled.filter((candidate) => candidate === "en" || published.some((entry) => entry.locale === candidate));
+  if (!availableLocales.includes(locale as Locale)) throw new TranslationNotPublishedError(survey.id, locale);
+  const wording = locale === "en" ? source : z.record(z.string(), z.string()).parse(published.find((entry) => entry.locale === locale)!.content);
 
   const questions: PublishedQuestion[] = survey.questions.map((question) => {
     const translation = question.translations[0];
@@ -116,7 +142,7 @@ export async function loadPublishedSurvey(
       categoryId: question.categoryId,
       categoryKey: category.key,
       sortOrder: question.sortOrder,
-      prompt: translation.prompt,
+      prompt: wording[`questions.${question.key}`]!,
       isRequired: question.isRequired,
     };
   });
@@ -125,11 +151,17 @@ export async function loadPublishedSurvey(
     id: survey.id,
     slug: survey.slug,
     version: survey.version,
-    title: survey.title,
-    description: survey.description,
+    title: wording.title!,
+    description: wording.description || null,
     visitTypes: survey.visitTypes,
     locale,
-    presentation: presentationSchema.parse(survey.patientPresentation),
+    presentation: {
+      services: presentation.services.map((service) => ({ key: service.key, label: wording[`services.${service.key}`]! })),
+      categoryLabels: Object.fromEntries(Object.keys(presentation.categoryLabels).map((key) => [key, wording[`categories.${key}`]!])),
+    },
+    visitTypeLabels: Object.fromEntries(survey.visitTypes.map((key) => [key, wording[`visitTypes.${key}`]!])),
+    ratingLabels: rules.scale.labels.map((_, index) => wording[`ratings.${index + 1}`]!),
+    availableLocales,
     categories: survey.categories.map((category) => ({
       id: category.id,
       key: category.key,
@@ -140,7 +172,7 @@ export async function loadPublishedSurvey(
     scoringPolicy: {
       id: survey.scoringPolicyVersionId,
       version: survey.scoringPolicyVersion.version,
-      rules: scoringPolicyRulesSchema.parse(survey.scoringPolicyVersion.rules),
+      rules,
     },
   };
 }

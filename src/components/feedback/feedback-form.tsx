@@ -1,8 +1,8 @@
 "use client";
 
 import { BrandMark } from "@/components/branding/brand-mark";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,7 +14,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "cn";
 import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 
+import { useFeedbackDraft, type FeedbackDraft } from "./draft-provider";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import type { Locale } from "@/i18n/catalog";
+
 export interface FeedbackFormSurvey {
+  id: string;
+  locale: Locale;
+  availableLocales: Locale[];
+  visitTypeLabels: Record<string, string>;
   slug: string;
   title: string;
   description: string | null;
@@ -31,13 +39,6 @@ export interface FeedbackFormSurvey {
   ratingScale: { min: 1; max: 5; labels: string[] };
 }
 
-interface Acknowledgement {
-  publicId: string;
-  status: "COMPLETE" | "INCOMPLETE";
-  patientIndex: number | null;
-  displayDecimals: number;
-}
-
 /** 1 answered rating, or explicit not-applicable. null = unanswered. */
 type AnswerState = number | "na" | null;
 
@@ -46,22 +47,22 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const tBrand = useTranslations("brand");
   const tUi = useTranslations("ui");
 
-  const [step, setStep] = useState(0);
-  const [privacyAck, setPrivacyAck] = useState(false);
-  const [visitType, setVisitType] = useState(survey.visitTypes[0] ?? "outpatient");
-  const [servicesUsed, setServicesUsed] = useState<string[]>([]);
-  const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
-  const [overallRating, setOverallRating] = useState<number | null>(null);
-  const [comment, setComment] = useState("");
-  const [contactConsent, setContactConsent] = useState(false);
-  const [contact, setContact] = useState({ displayName: "", phone: "", email: "" });
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [acknowledgement, setAcknowledgement] = useState<Acknowledgement | null>(null);
-
-  // Stable across retries so a double-tap or a network retry cannot create two
-  // submissions. Kept in a ref rather than state so it survives re-renders.
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const locale = useLocale();
+  const { draft, setter } = useFeedbackDraft(survey.id, survey.visitTypes[0] ?? "outpatient");
+  const { step, privacyAck, visitType, servicesUsed, answers, overallRating, comment, contactConsent, contact, error, submitting, acknowledgement, idempotencyKey } = draft;
+  const setStep = setter("step");
+  const setPrivacyAck = setter("privacyAck");
+  const setVisitType = setter("visitType");
+  const setServicesUsed = setter("servicesUsed");
+  const setAnswers = setter("answers");
+  const setOverallRating = setter("overallRating");
+  const setComment = setter("comment");
+  const setContactConsent = setter("contactConsent");
+  const setContact = setter("contact");
+  const setError = setter("error");
+  const setSubmitting = setter("submitting");
+  const setAcknowledgement = setter("acknowledgement");
+  const setIdempotencyKey = setter("idempotencyKey");
 
   const grouped = useMemo(() => {
     const byCategory = new Map<string, typeof survey.questions>();
@@ -103,6 +104,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
     return (
       <Card>
         <CardHeader>
+          <div className="flex justify-end"><LanguageSwitcher locales={survey.availableLocales} surveyVersionId={survey.id} /></div>
           <CardTitle className="flex items-center gap-2 text-xl">
             <CheckCircle2 aria-hidden className="size-5 text-primary" />
             {t("confirmationTitle")}
@@ -118,7 +120,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
             <div className="rounded-lg border p-4">
               <p className="text-sm text-muted-foreground">{t("confirmationIndex")}</p>
               <p className="text-3xl font-semibold tabular-nums">
-                {acknowledgement.patientIndex.toFixed(acknowledgement.displayDecimals)}
+                {new Intl.NumberFormat(locale, { minimumFractionDigits: acknowledgement.displayDecimals, maximumFractionDigits: acknowledgement.displayDecimals }).format(acknowledgement.patientIndex)}
                 <span className="text-base font-normal text-muted-foreground"> / 100</span>
               </p>
             </div>
@@ -146,7 +148,9 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
               setContact({ displayName: "", phone: "", email: "" });
               setOverallRating(null);
               setError(null);
-              idempotencyKey.current = crypto.randomUUID();
+              setPrivacyAck(false);
+              setVisitType(survey.visitTypes[0] ?? "outpatient");
+              setIdempotencyKey(crypto.randomUUID());
             }}
           >
             {t("anotherResponse")}
@@ -170,22 +174,22 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
   function goNext() {
     if (step === 0 && !privacyAck) {
-      setError(t("errors.privacyConsent"));
+      setError("errors.privacyConsent");
       return;
     }
     if (step === 1 && servicesUsed.length === 0) {
-      setError(t("errors.services"));
+      setError("errors.services");
       return;
     }
     if (step === 2 && answeredCount < survey.questions.length) {
-      setError(t("errors.questions"));
+      setError("errors.questions");
       return;
     }
     // Step 3 holds the standalone overall-experience rating. It was previously
     // validated nowhere, so a respondent could reach submit without choosing
     // one even though the server requires it.
     if (step === 3 && overallRating === null) {
-      setError(t("errors.overallRating"));
+      setError("errors.overallRating");
       return;
     }
     setError(null);
@@ -196,7 +200,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
     // This check belongs here, not in `goNext`: the contact step is the last one
     // and has no Next button, so validating it while advancing never ran.
     if (contactConsent && !contact.phone.trim() && !contact.email.trim()) {
-      setError(t("errors.contactConsent"));
+      setError("errors.contactConsent");
       return;
     }
 
@@ -208,7 +212,9 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           surveySlug: survey.slug,
-          idempotencyKey: idempotencyKey.current,
+          idempotencyKey,
+          surveyVersionId: survey.id,
+          locale: survey.locale,
           visitType,
           servicesUsed,
           respondentRole: "PATIENT",
@@ -234,16 +240,16 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
       const payload = await response.json();
 
       if (response.status === 429) {
-        setError(t("errors.rateLimit"));
+        setError("errors.rateLimit");
         return;
       }
       if (!response.ok) {
-        setError(response.status === 422 ? t("errors.questions") : t("errors.submit"));
+        setError(response.status === 422 ? "errors.questions" : "errors.submit");
         return;
       }
-      setAcknowledgement(payload as Acknowledgement);
+      setAcknowledgement(payload as NonNullable<FeedbackDraft["acknowledgement"]>);
     } catch {
-      setError(t("errors.submit"));
+      setError("errors.submit");
     } finally {
       setSubmitting(false);
     }
@@ -256,6 +262,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
       <header className="patient-brand">
         <BrandMark />
         <div className="min-w-0">
@@ -265,6 +272,8 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
           <p className="truncate text-sm text-muted-foreground">{tBrand("tagline")}</p>
         </div>
       </header>
+      <LanguageSwitcher locales={survey.availableLocales} surveyVersionId={survey.id} disabled={submitting} />
+      </div>
 
       <div className="space-y-3">
         <p className="section-eyebrow">{tBrand("tagline")}</p>
@@ -326,7 +335,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
           role="alert"
           className="focus-visible:ring-2 focus-visible:ring-destructive"
         >
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{t(error)}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -370,7 +379,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
                   <div key={type} className="flex items-center gap-2">
                     <RadioGroupItem value={type} id={`visit-${type}`} />
                     <Label htmlFor={`visit-${type}`} className="capitalize">
-                      {type}
+                      {survey.visitTypeLabels[type] ?? type}
                     </Label>
                   </div>
                 ))}

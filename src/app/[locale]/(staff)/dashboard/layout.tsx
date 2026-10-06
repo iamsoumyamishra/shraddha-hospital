@@ -26,7 +26,7 @@ export default async function StaffDashboardLayout({
   // added outside the authenticated shell by accident.
   const staff = await requireStaffPage();
   if (staff.memberships.length === 0) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   const roleLabel = [...new Set(staff.memberships.map((membership) => membership.role))]

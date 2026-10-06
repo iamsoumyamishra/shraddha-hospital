@@ -1,10 +1,12 @@
 import { setRequestLocale } from "next-intl/server";
-import { hasLocale } from "next-intl";
+import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { notFound } from "next/navigation";
 import { routing, TEXT_DIRECTION } from "@/i18n/routing";
+import { getEnabledLocales } from "@/i18n/availability";
+import { LocaleAvailabilityProvider } from "@/components/i18n/language-switcher";
 
 export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
+  return getEnabledLocales().map((locale) => ({ locale }));
 }
 
 export default async function LocaleLayout({
@@ -18,8 +20,15 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
+  if (!getEnabledLocales().includes(locale)) notFound();
   // Enables static rendering for server components below this layout.
   setRequestLocale(locale);
 
-  return <div lang={locale} dir={TEXT_DIRECTION[locale]}>{children}</div>;
+  return (
+    <NextIntlClientProvider>
+      <LocaleAvailabilityProvider locales={getEnabledLocales()}>
+        <div lang={locale} dir={TEXT_DIRECTION[locale]}>{children}</div>
+      </LocaleAvailabilityProvider>
+    </NextIntlClientProvider>
+  );
 }
