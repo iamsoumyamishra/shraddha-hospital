@@ -23,3 +23,12 @@ retention controls; the update trigger is not a general database authorization l
 answers, category scores and scoring-policy IDs retain their existing shape.
 Comments are stored in their original text; a UI locale is not proof of a
 comment's language. Existing English clients remain compatible.
+
+## Survey draft authoring
+
+Question management reuses `SurveyVersion.status = DRAFT`. Cloning creates new
+question/category IDs with the same stable keys and scoring-policy reference.
+Published versions, answers and category scores are not rewritten. Per-survey
+row locks and revision hashes protect concurrent draft edits; a hospital row lock
+serializes version allocation by this workflow. Hindi/Marathi question wording
+stays `DRAFT` until full bundle review/publication. No new migration is required.

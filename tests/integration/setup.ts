@@ -14,13 +14,19 @@ if (!testDatabaseUrl) {
   throw new Error("TEST_DATABASE_URL is not set. Integration tests will not run against the dev database.");
 }
 
-if (testDatabaseUrl === process.env.DATABASE_URL) {
+if ([process.env.DATABASE_URL, process.env.STORAGE_DATABASE_URL, process.env.STORAGE_DATABASE_URL_UNPOOLED].includes(testDatabaseUrl)) {
   throw new Error(
     "TEST_DATABASE_URL and DATABASE_URL are the same. Refusing to run integration tests against the development database.",
   );
 }
 
 process.env.DATABASE_URL = testDatabaseUrl;
+// Never let a Vercel integration override the isolated test database.
+delete process.env.STORAGE_DATABASE_URL;
+delete process.env.STORAGE_DATABASE_URL_UNPOOLED;
+// Fixtures create their own synthetic hospitals; local deployment scope must
+// not filter those fixtures out of the public-survey loader.
+process.env.PUBLIC_SURVEY_HOSPITAL_SLUG = "";
 
 // Migrations are applied once per test run, outside the per-file hooks.
 execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {

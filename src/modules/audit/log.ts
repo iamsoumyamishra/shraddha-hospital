@@ -7,6 +7,9 @@ export type AuditAction =
   | "READ_CONTACT_DETAILS"
   | "CREATE_CASE"
   | "UPDATE_CASE"
+  | "CREATE_SURVEY_DRAFT"
+  | "UPDATE_SURVEY_DRAFT"
+  | "PUBLISH_SURVEY"
   | "EXPORT";
 
 export interface AuditEntry {

@@ -16,3 +16,16 @@ currently published patient language; no synthetic test approval is released.
 Later: language reporting filters, full ICU plural/select support, RTL validation,
 and audited/accessibility improvements to report exports. See [reports](reports.md)
 for current scope and row limits. These later features are not implemented.
+
+## Question management
+
+Implemented: protected hospital-admin Questions page, versioned draft editing,
+add/remove/reorder/category selection, Hindi/Marathi question drafts, and reviewed
+English publication with transactional audit history. Full locale review remains
+the documented manual catalog/bundle workflow; the dashboard does not publish
+Hindi/Marathi interface catalogs. See [question management](question-management.md).
+
+Implemented: optional per-question Gemini AI Translate dropdown for Hindi/Marathi
+drafts from English, protected by hospital-admin authorization and a server-only
+key. Generated text is unsaved and unreviewed; full language publication still
+requires the manual review workflow.

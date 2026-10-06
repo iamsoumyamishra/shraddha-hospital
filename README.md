@@ -7,6 +7,8 @@ separately consented contact details; the server calculates the experience index
 The homepage is an employee portal with a shareable patient form link.
 The main dashboard can download a five-page aggregate patient experience PDF
 for the selected reporting period and authorized scope; see [reports](docs/reports.md).
+Hospital administrators manage versioned survey questions in the dashboard's
+[Questions page](docs/question-management.md).
 
 `pnpm build` checks localization, deploys pending Prisma migrations to the configured database,
 generates the Prisma client, then builds Next.js. The build environment needs
@@ -73,7 +75,10 @@ pnpm build
 
 Only the feedback form is multilingual. Patients choose a language before the
 privacy notice; employee pages, login, dashboards and reports stay in English.
-No translation API or key is needed. Edit stored translations manually, then
-review and publish them using the [localization workflow](docs/localization.md).
+Patient forms use stored, reviewed translations. On the Questions page, administrators
+can optionally generate Hindi/Marathi question drafts from English using Gemini.
+Set server-only `GEMINI_API_KEY`; `GEMINI_TRANSLATION_MODEL` optionally overrides
+the default `gemini-3.5-flash-lite`. Review generated wording before saving and
+follow the [localization workflow](docs/localization.md) before enabling a language.
 `i18n:sync` prepares empty fields for changed feedback wording, without making
 network requests. Production builds reject stale reviewed feedback catalogs.

@@ -13,7 +13,8 @@ Set `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` to the canonical HTTPS productio
 origin. Preserve the existing `BETTER_AUTH_SECRET` when redeploying so sessions
 remain valid. Set the hospital branding and survey scope to the existing hospital
 configuration. Production does not require `TEST_DATABASE_URL`, seed credentials,
-or translation API keys. Builds apply migrations but never seed demo responses or
+or translation API keys for patient feedback. The optional staff AI Translate
+feature requires `GEMINI_API_KEY`. Builds apply migrations but never seed demo responses or
 reset the database. Published survey translations still require human review.
 
 ## Display branding
@@ -71,9 +72,13 @@ hospitals use the same public survey slug. Without it, ambiguous slugs fail clos
 This trusted server configuration selects data scope; `HOSPITAL_NAME` remains
 display branding only. A pinned survey version cannot cross the resolved scope.
 
-No translation API credentials are required. The Google provider and its
-verification command have been removed. Remove `TRANSLATION_PROVIDER` and
-`GOOGLE_TRANSLATE_API_KEY` from existing deployment settings if present.
+For optional staff question translation, set server-only `GEMINI_API_KEY`.
+`GEMINI_TRANSLATION_MODEL` defaults to `gemini-3.5-flash-lite`; override it with a
+compatible Gemini model if needed. Restart/redeploy after configuring the key.
+Without it the editor disables AI Translate; manual translation and patient forms
+continue working. Do not prefix the key with `NEXT_PUBLIC_`. No schema migration
+is needed for this feature. The retired Google Cloud Translation settings
+`TRANSLATION_PROVIDER` and `GOOGLE_TRANSLATE_API_KEY` are unused and can be removed.
 Only patient feedback routes offer language selection; other application routes
 are served in English. Locale availability now reviews feedback interface text
 rather than the entire employee/dashboard catalog.

@@ -46,6 +46,7 @@ export const STAFF_NAV: NavItem[] = [
   { key: "phiIndex", href: "/dashboard/phi", icon: TrendingUp },
   { key: "responses", href: "/dashboard/responses", icon: ClipboardList },
   { key: "cases", href: "/dashboard/cases", icon: LifeBuoy },
+  { key: "questions", href: "/dashboard/questions", icon: ClipboardList },
 ];
 
 export function StaffShell({

@@ -15,15 +15,16 @@ const save = (file: string, value: unknown, exclusive = false) => writeFile(file
 
 async function getSource(id: string) {
   const survey = await prisma.surveyVersion.findUniqueOrThrow({ where: { id }, include: {
-    scoringPolicyVersion: true, questions: { orderBy: { sortOrder: "asc" }, include: { translations: { where: { locale: "en", status: "PUBLISHED" } } } },
+    scoringPolicyVersion: true, questions: { orderBy: { sortOrder: "asc" }, include: { translations: { where: { locale: { in: ["en", "hi", "mr"] } } } } },
   } });
   if (survey.status !== "PUBLISHED") throw new Error("Only a published English survey can be translated");
   const content = surveySourceMessages({ title: survey.title, description: survey.description, visitTypes: survey.visitTypes,
     presentation: presentationSchema.parse(survey.patientPresentation),
     ratingLabels: scoringPolicyRulesSchema.parse(survey.scoringPolicyVersion.rules).scale.labels,
     questions: survey.questions.map((question) => {
-      if (!question.translations[0]) throw new Error("Published English question translation missing");
-      return { key: question.key, prompt: question.translations[0].prompt };
+      const english = question.translations.find((translation) => translation.locale === "en" && translation.status === "PUBLISHED");
+      if (!english) throw new Error("Published English question translation missing");
+      return { key: question.key, prompt: english.prompt };
     }) });
   return { survey, content };
 }
@@ -36,8 +37,9 @@ async function main() {
     const id = z.string().uuid().parse(option("id"));
     const locale = z.enum(["hi", "mr"]).parse(option("locale"));
     const { survey, content } = await getSource(id);
-    let draftContent = Object.fromEntries(Object.keys(content).map((key) => [key, ""]));
-    let hashes: FlatMessages = {};
+    let draftContent = Object.fromEntries(Object.keys(content).map((key) => [key, key.startsWith("questions.")
+      ? survey.questions.find((question) => `questions.${question.key}` === key)?.translations.find((translation) => translation.locale === locale)?.prompt ?? "" : ""]));
+    let hashes: FlatMessages = sourceHashes(content);
     const templateFile = option("template");
     if (templateFile) {
       const template = z.object({ slug: z.string(), version: z.number(), locale: z.string(), sourceHash: z.string(), content: z.record(z.string(), z.string()) })

@@ -1,0 +1,110 @@
+import { test, expect } from "@playwright/test";
+
+const password = process.env.SEED_STAFF_PASSWORD;
+
+test("question management redirects anonymous staff to sign in", async ({ page }) => {
+  await page.goto("/en/dashboard/questions");
+  await expect(page).toHaveURL(/\/en\/login/);
+});
+
+test("an administrator edits and publishes a new question version", async ({ page }) => {
+  test.skip(!password || process.env.SURVEY_MANAGEMENT_E2E !== "1", "Requires an explicitly isolated synthetic database and staff password");
+  await page.goto("/en/login");
+  await page.getByLabel("Email").fill("admin@shraddha.example");
+  await page.getByLabel("Password", { exact: true }).fill(password!);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(/\/en\/dashboard/);
+  await page.goto("/en/dashboard/questions");
+  await expect(page.getByRole("heading", { name: "Survey questions" })).toBeVisible();
+  const version = page.getByLabel("Survey and version");
+  const published = await version.locator("option").evaluateAll((options) => {
+    const option = options.find((item) => item.textContent?.includes("Shraddha Hospital") && item.textContent?.includes("v1 · published")) as HTMLOptionElement | undefined;
+    return option?.value;
+  });
+  expect(published).toBeTruthy();
+  await version.selectOption(published!);
+  await page.getByRole("button", { name: "Create editable draft" }).click();
+  await expect(page.getByRole("button", { name: "Publish version", exact: true })).toBeVisible();
+  const revisedEnglish = `Synthetic revised reception question ${Date.now()}.`;
+  await page.getByLabel("English question", { exact: true }).first().fill(revisedEnglish);
+  await page.getByLabel("Language", { exact: true }).selectOption("hi");
+  await page.getByLabel("Hindi question", { exact: true }).first().fill("कृत्रिम चाचणी प्रश्न");
+  await page.getByLabel("Language", { exact: true }).selectOption("en");
+  await page.getByRole("button", { name: "Add question", exact: true }).click();
+  await page.getByLabel("English question", { exact: true }).last().fill("Synthetic additional reception question.");
+  await page.getByRole("button", { name: "Move question 16 up", exact: true }).click();
+  await page.getByRole("button", { name: "Remove question 15", exact: true }).click();
+  await page.getByRole("button", { name: "Remove question", exact: true }).click();
+  await expect(page.getByLabel("English question", { exact: true })).toHaveCount(15);
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect(page.getByText("Draft saved. Patients continue to see the published version.")).toBeVisible();
+  await page.getByRole("button", { name: "Publish version", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Confirm publication", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Create editable draft" })).toBeVisible();
+  await page.goto("/en/feedback/outpatient-experience");
+  await page.getByRole("radio", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "Continue to feedback" }).click();
+  await page.getByLabel("I have read the notice above.").click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByLabel("Reception").click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText(revisedEnglish, { exact: true })).toBeVisible();
+});
+
+
+test("AI translation uses current English and protects existing drafts", async ({ page }) => {
+  test.skip(!password || process.env.SURVEY_MANAGEMENT_E2E !== "1", "Requires an isolated synthetic database and configured Gemini key");
+  await page.goto("/en/login");
+  await page.getByLabel("Email").fill("admin@shraddha.example");
+  await page.getByLabel("Password", { exact: true }).fill(password!);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(/\/en\/dashboard/);
+  await page.goto("/en/dashboard/questions");
+  const versions = page.getByLabel("Survey and version");
+  const published = await versions.locator("option").evaluateAll((options) => (options.find((item) => item.textContent?.includes("Shraddha Hospital") && item.textContent?.includes("v1 · published")) as HTMLOptionElement)?.value);
+  await versions.selectOption(published!);
+  await page.getByRole("button", { name: "Create editable draft" }).click();
+  const english = "Was the reception staff helpful during your visit?";
+  await page.getByLabel("English question", { exact: true }).first().fill(english);
+  await page.getByLabel("Language", { exact: true }).selectOption("hi");
+  await page.getByLabel("Hindi question", { exact: true }).first().fill("Existing reviewed wording");
+  const requests: { english: string; locale: string }[] = [];
+  let fail = false;
+  await page.route("**/api/staff/surveys", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const body = route.request().postDataJSON();
+    if (body.action !== "translate") return route.continue();
+    requests.push(body);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.fulfill({ status: fail ? 429 : 200, contentType: "application/json", body: JSON.stringify(fail ? { error: "Translation quota unavailable." } : { translation: body.locale === "hi" ? "क्या स्वागत कक्ष के कर्मचारियों ने आपकी मदद की?" : "कर्मचारी मदतशील होते का?", locale: body.locale }) });
+  });
+  const dropdown = page.getByRole("button", { name: "AI Translate question 1", exact: true });
+  await dropdown.click();
+  await expect(page.getByRole("menuitem", { name: "मराठी · Marathi", exact: true })).toBeVisible();
+  await page.getByRole("menuitem", { name: "हिन्दी · Hindi", exact: true }).click();
+  await page.getByRole("button", { name: "Keep existing text" }).click();
+  expect(requests).toHaveLength(0);
+  await expect(page.getByLabel("Hindi question", { exact: true }).first()).toHaveValue("Existing reviewed wording");
+  await dropdown.click();
+  await page.getByRole("menuitem", { name: "हिन्दी · Hindi", exact: true }).click();
+  await page.getByRole("button", { name: "Replace with AI draft" }).click();
+  await expect(page.getByLabel("Hindi question", { exact: true }).first()).toBeDisabled();
+  await expect(page.getByText("AI Hindi draft added. Review the wording, then save the draft.")).toBeVisible();
+  expect(requests[0]).toMatchObject({ english, locale: "hi" });
+  await expect(page.getByLabel("Hindi question", { exact: true }).first()).toHaveValue("क्या स्वागत कक्ष के कर्मचारियों ने आपकी मदद की?");
+  await dropdown.click();
+  await page.getByRole("menuitem", { name: "मराठी · Marathi", exact: true }).click();
+  if (await page.getByRole("dialog").isVisible()) await page.getByRole("button", { name: "Replace with AI draft" }).click();
+  await expect(page.getByText("AI Marathi draft added. Review the wording, then save the draft.")).toBeVisible();
+  expect(requests[1]).toMatchObject({ english, locale: "mr" });
+  fail = true;
+  await dropdown.click();
+  await page.getByRole("menuitem", { name: "मराठी · Marathi", exact: true }).click();
+  await page.getByRole("button", { name: "Replace with AI draft" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Translation quota unavailable." })).toBeVisible();
+  await expect(page.getByLabel("Marathi question", { exact: true }).first()).toHaveValue("कर्मचारी मदतशील होते का?");
+  await page.getByLabel("Language", { exact: true }).selectOption("en");
+  await expect(page.getByLabel("English question", { exact: true }).first()).toHaveValue(english);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+});

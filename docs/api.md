@@ -33,3 +33,38 @@ unchanged. This UI change does not prevent a new visit to the public QR form.
 Legacy clients without a version continue resolving the latest English survey;
 they do not gain the version-pinning guarantees of new clients. This change does
 not add invitations, tenant selection or new reporting filters.
+
+## Survey management
+
+`GET /api/staff/surveys` lists questionnaire versions only for hospitals where
+the authenticated active staff user has a hospital-wide `HOSPITAL_ADMIN`
+membership. Responses are not cached. Unauthenticated requests return 401;
+unauthorized requests return 403.
+
+`POST /api/staff/surveys` accepts JSON (maximum 256,000 bytes) and requires an
+`Origin` matching `BETTER_AUTH_URL`. Each action rechecks hospital authorization.
+
+- Clone: `{ "action": "clone", "surveyId": "<uuid>" }`.
+- Save: `{ "action": "save", "surveyId": "<uuid>", "revision": "<hash>", "draft": { "title": "...", "description": "...", "questions": [{ "key": "reception", "categoryKey": "reception", "prompts": { "en": "...", "hi": "", "mr": "" } }] } }`.
+- Publish: `{ "action": "publish", "surveyId": "<uuid>", "revision": "<hash>" }`.
+
+Successful mutations return `{ "survey": ... }` including the new revision.
+The server chooses hospital scope, version number and existing scoring policy;
+clients cannot supply authoritative tenant/policy IDs. Invalid fields return 422,
+stale revisions/read-only versions return 409, excessive bodies return 413, and
+unsupported content types return 415. Published versions remain immutable.
+Draft changes and audit events commit atomically. See
+[question management](question-management.md) for behavior and limitations.
+
+### AI question translation
+
+`POST /api/staff/surveys` also accepts `{ "action": "translate", "surveyId": "<uuid>",
+"english": "Current English question", "locale": "hi" }` (`hi` or `mr` only).
+It requires an editable draft within the administrator's hospital, the same
+origin/content-type protections, and English text of 1–1,000 characters.
+Success returns `{ "translation": "...", "locale": "hi" }` with no-store.
+This action neither persists text nor approves/publishes translations.
+A per-instance throttle allows 30 requests per staff user per minute; 429 includes
+`Retry-After` for the local throttle. Missing/invalid provider configuration returns
+503, timeout 504, invalid provider output 502, and provider quota failure 429.
+Errors never expose the key or raw provider response.

@@ -25,3 +25,18 @@ Only feedback routes negotiate patient locales. Other routes redirect to English
 The first feedback screen records the chosen language in the volatile versioned
 draft before showing the privacy notice. Approval hashes cover only patient
 interface text, so staff content changes do not invalidate feedback translations.
+
+## Survey authoring
+
+The protected Questions page renders the `QuestionManager` client editor with
+server-scoped versions. `modules/survey/manage-survey.ts` handles draft cloning,
+validation, row locks, optimistic revision checks and English publication.
+`/api/staff/surveys` resolves the authenticated identity and enforces request
+origin/payload limits. Mutations and audit events share a transaction. This uses
+the existing survey/category/question/translation tables, without a schema change.
+See [question management](question-management.md).
+
+Optional `modules/survey/translate-question.ts` calls Gemini from the Node server
+for administrator-requested question drafts. Only a key-availability boolean
+reaches the editor; credentials and provider calls stay server-side. Translation
+does not write to the database and patient pages use reviewed stored wording.

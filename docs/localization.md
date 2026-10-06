@@ -8,8 +8,14 @@ and the five-step survey. A choice is required even when English is the only
 published option. Homepage, staff login, dashboards and reports stay in English;
 non-English URLs for those pages redirect to their English equivalents.
 
-There is no translation API, automatic page translation or translation key.
-Google provider code and verification commands were removed. Existing Hindi and
+Patient pages never translate at runtime. Staff can optionally use **AI Translate**
+on draft questions to generate Hindi/Marathi wording from the current English
+text. This calls Google Gemini server-side with `GEMINI_API_KEY`, using
+`GEMINI_TRANSLATION_MODEL` (default `gemini-3.5-flash-lite`). Generated wording is
+an unsaved draft requiring review; it does not approve interface catalogs or
+publish a language. See [question management](question-management.md).
+The earlier Google Cloud Translation provider and its verification commands
+were removed; this optional Gemini tool serves staff question drafts only. Existing Hindi and
 Marathi text was AI-authored and remains an unpublished draft until human review.
 English is currently the only available patient language.
 
@@ -46,6 +52,12 @@ not proof of linguistic accuracy. Build checks reject stale approvals. ICU
 arguments must match exactly; plural/select syntax is not supported yet.
 
 ## Manual survey workflow
+
+Hospital administrators can edit question wording and Hindi/Marathi question
+drafts on `/en/dashboard/questions`; see [question management](question-management.md).
+Publishing there releases a new English version only. For that new version,
+export without the old v1 template: saved question translations are carried into
+the export, and remaining locale fields must be completed and reviewed manually.
 
 English questions, labels and rules live in the published database survey.
 Non-English prompts, titles, services, category names, visit types and rating

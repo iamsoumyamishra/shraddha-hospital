@@ -512,8 +512,14 @@ describe("submitFeedback", () => {
 });
 
 describe("published survey", () => {
+  async function seededVersionOne() {
+    const version = await prisma.surveyVersion.findFirstOrThrow({ where: {
+      slug: PUBLIC_SURVEY_SLUG, version: 1, status: "PUBLISHED", hospital: { slug: "shraddha-hospital" },
+    } });
+    return loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", version.id);
+  }
   it("publishes exactly 15 scored questions across 9 categories", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await seededVersionOne();
     expect(survey.version).toBe(1);
     expect(survey.questions).toHaveLength(15);
     expect(survey.categories).toHaveLength(9);
@@ -521,7 +527,7 @@ describe("published survey", () => {
 
   it("asks every v1 question unconditionally", async () => {
     const questions = await prisma.question.findMany({
-      where: { surveyVersion: { slug: PUBLIC_SURVEY_SLUG, status: "PUBLISHED" } },
+      where: { surveyVersion: { slug: PUBLIC_SURVEY_SLUG, version: 1, status: "PUBLISHED", hospital: { slug: "shraddha-hospital" } } },
       select: { key: true, appliesWhen: true, isRequired: true },
     });
     // The focused core asks all 15 questions of every respondent, so no
@@ -531,7 +537,7 @@ describe("published survey", () => {
   });
 
   it("exposes only published translations", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await seededVersionOne();
     const drafts = await prisma.questionTranslation.count({
       where: { status: "DRAFT", question: { surveyVersionId: survey.id } },
     });
