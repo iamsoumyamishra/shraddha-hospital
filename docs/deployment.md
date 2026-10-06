@@ -1,5 +1,21 @@
 # Deployment configuration
 
+## Vercel with Neon
+
+The application supports the Vercel Neon integration with the `STORAGE` prefix.
+`STORAGE_DATABASE_URL` takes precedence over a manually configured `DATABASE_URL`
+at runtime. Prisma migrations prefer `STORAGE_DATABASE_URL_UNPOOLED` and fall back
+to the runtime connection. Local installations continue to use `DATABASE_URL`.
+Keep integration-managed credentials managed by Neon rather than copying secrets
+into source code. Migration execution still requires access to the configured database.
+
+Set `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` to the canonical HTTPS production
+origin. Preserve the existing `BETTER_AUTH_SECRET` when redeploying so sessions
+remain valid. Set the hospital branding and survey scope to the existing hospital
+configuration. Production does not require `TEST_DATABASE_URL`, seed credentials,
+or translation API keys. Builds apply migrations but never seed demo responses or
+reset the database. Published survey translations still require human review.
+
 ## Display branding
 
 `HOSPITAL_NAME` is optional, server-side display configuration. Set it in the
@@ -27,7 +43,8 @@ complete production deployment or multi-tenant provisioning guide.
 `pnpm build` now runs `pnpm i18n:check`, `pnpm db:deploy` (`prisma migrate deploy`),
 `prisma generate`, and `next build` in that order. A failed review check or
 migration stops the build before compilation. Pending committed migrations are
-applied to the database selected by `DATABASE_URL`; already-applied migrations
+applied to the configured migration connection (Neon's unpooled URL when present,
+otherwise `DATABASE_URL`); already-applied migrations
 are not reapplied. No development reset, schema push or seeding runs during builds.
 
 Configure `DATABASE_URL` in the deployment build environment, with network access
@@ -44,18 +61,19 @@ table. Migration rollback requires switching the
 application back before removing the new table; do not remove published records
 as a routine rollback.
 
-`HOSPITAL_ENABLED_LOCALES` defaults to `en,hi,mr`, but only reviewed UI catalogs
+`HOSPITAL_ENABLED_LOCALES` defaults to `en,hi,mr`, but only reviewed feedback UI catalogs
 are available. Patient forms also require a published survey locale bundle.
 `HOSPITAL_DEFAULT_LOCALE` defaults to English and falls back to English if its
-requested UI locale is unavailable. English remains the fallback in all deployments.
+requested feedback UI locale is unavailable. English remains the fallback in all deployments.
 
 Set `PUBLIC_SURVEY_HOSPITAL_SLUG` to the database hospital slug when multiple
 hospitals use the same public survey slug. Without it, ambiguous slugs fail closed.
 This trusted server configuration selects data scope; `HOSPITAL_NAME` remains
 display branding only. A pinned survey version cannot cross the resolved scope.
 
-The optional `TRANSLATION_PROVIDER=google` CLI needs `GOOGLE_TRANSLATE_API_KEY`.
-This is a private server/operator variable
-and need not be present in the runtime web application. No external requests run
-unless the operator invokes sync. Check [localization](localization.md) before
-releasing languages; committed Hindi/Marathi content currently remains draft.
+No translation API credentials are required. The Google provider and its
+verification command have been removed. Remove `TRANSLATION_PROVIDER` and
+`GOOGLE_TRANSLATE_API_KEY` from existing deployment settings if present.
+Only patient feedback routes offer language selection; other application routes
+are served in English. Locale availability now reviews feedback interface text
+rather than the entire employee/dashboard catalog.

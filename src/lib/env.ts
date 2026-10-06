@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { databaseUrl } from "@/lib/database-url";
 
 const optionalString = z
   .string()
@@ -27,7 +28,7 @@ const serverSchema = z.object({
 export type ServerEnv = z.infer<typeof serverSchema>;
 
 function loadServerEnv(): ServerEnv {
-  const parsed = serverSchema.safeParse(process.env);
+  const parsed = serverSchema.safeParse({ ...process.env, DATABASE_URL: databaseUrl(process.env) });
   if (!parsed.success) {
     const detail = parsed.error.issues
       .map((issue) => `${issue.path.join(".")}: ${issue.message}`)

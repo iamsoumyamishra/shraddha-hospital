@@ -8,7 +8,7 @@ The homepage is an employee portal with a shareable patient form link.
 The main dashboard can download a five-page aggregate patient experience PDF
 for the selected reporting period and authorized scope; see [reports](docs/reports.md).
 
-`pnpm build` checks localization, deploys pending Prisma migrations to `DATABASE_URL`,
+`pnpm build` checks localization, deploys pending Prisma migrations to the configured database,
 generates the Prisma client, then builds Next.js. The build environment needs
 database connectivity and migration permissions. See [deployment](docs/deployment.md).
 
@@ -56,7 +56,7 @@ change staff permissions. See [deployment notes](docs/deployment.md).
 
 English is currently available. Hindi and Marathi UI/survey wording is included
 as AI drafts awaiting human review. Language choices are gated by complete
-reviewed interface content and published translations for the selected survey
+reviewed feedback interface content and published translations for the selected survey
 version. Switching preserves the form in memory and does not change scoring.
 
 ```bash
@@ -71,8 +71,9 @@ pnpm lint
 pnpm build
 ```
 
-Automatic draft updates use an optional Google Cloud Translation adapter, disabled by default.
-Set existing Google Cloud Translation credentials only in your server/operator environment;
-patient pages never call the service. See [localization](docs/localization.md)
-for revision tracking, manual editing, human review and survey publication.
-Production builds fail if a previously reviewed catalog becomes stale.
+Only the feedback form is multilingual. Patients choose a language before the
+privacy notice; employee pages, login, dashboards and reports stay in English.
+No translation API or key is needed. Edit stored translations manually, then
+review and publish them using the [localization workflow](docs/localization.md).
+`i18n:sync` prepares empty fields for changed feedback wording, without making
+network requests. Production builds reject stale reviewed feedback catalogs.
