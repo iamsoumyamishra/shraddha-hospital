@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Shraddha Hospital",
+    "name": "Hospital Name",
     "tagline": "Patient experience feedback"
   },
   "landing": {
@@ -231,7 +231,7 @@
     "close": "Close"
   },
   "brand": {
-    "name": "Shraddha Hospital",
+    "name": "Hospital Name",
     "tagline": "Patient experience",
     "emergencyLabel": "Urgent or emergency help",
     "emergencyBody": "This form is not monitored at any time. If someone needs urgent medical care, contact the hospital directly or go to the nearest emergency department."
@@ -267,5 +267,58 @@
     "surveyHint": "Take your time. Choose “Not applicable” for a question that does not apply to your visit.",
     "showPassword": "Show password",
     "hidePassword": "Hide password"
+  },
+  "employeeHome": {
+    "portal": "Employee portal",
+    "eyebrow": "Hospital staff workspace",
+    "title": "A better patient experience starts here.",
+    "description": "Your workspace to review patient feedback, understand service experience, and manage follow-up cases across your hospital.",
+    "signIn": "Staff sign in",
+    "openDashboard": "Open dashboard",
+    "accessHint": "Sign in with your hospital staff account to access feedback.",
+    "workflowTitle": "From feedback to action",
+    "workflow": {
+      "review": {
+        "title": "Review patient feedback",
+        "body": "Read responses and comments from patients and caregivers."
+      },
+      "understand": {
+        "title": "Understand service experience",
+        "body": "Explore category scores, response counts, and trends."
+      },
+      "followUp": {
+        "title": "Manage follow-up cases",
+        "body": "Review open cases and record resolutions within your assigned scope."
+      }
+    },
+    "workspaceTitle": "Your workspace",
+    "workspaceHint": "Staff sign-in required",
+    "sections": {
+      "reports": {
+        "title": "Experience reports",
+        "body": "Explore patient experience scores, service ratings, and trends over time."
+      },
+      "responses": {
+        "title": "Patient responses",
+        "body": "Review individual feedback and filter responses by reporting period."
+      },
+      "cases": {
+        "title": "Follow-up cases",
+        "body": "Track open feedback cases and update their status and resolution."
+      }
+    },
+    "feedback": {
+      "eyebrow": "For your patients",
+      "title": "Share the patient feedback form",
+      "body": "Send this link to patients after their visit. They can share their experience without creating an account.",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "open": "Open form",
+      "newTab": " (opens in a new tab)",
+      "hint": "Copy the link to share it, or open the form to preview the patient journey.",
+      "success": "Patient feedback link copied. You can now share it with a patient.",
+      "error": "The link could not be copied. Open the form and copy its address from your browser."
+    },
+    "footer": "Patient experience feedback and reporting"
   }
 }

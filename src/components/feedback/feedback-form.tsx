@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandMark } from "@/components/branding/brand-mark";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "cn";
-import { CheckCircle2, HeartPulse, Loader2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 
 export interface FeedbackFormSurvey {
   slug: string;
@@ -256,12 +257,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   return (
     <div className="space-y-6">
       <header className="patient-brand">
-        <span
-          aria-hidden
-          className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"
-        >
-          <HeartPulse className="size-6" />
-        </span>
+        <BrandMark />
         <div className="min-w-0">
           <p className="truncate text-base font-semibold leading-tight tracking-tight">
             {tBrand("name")}

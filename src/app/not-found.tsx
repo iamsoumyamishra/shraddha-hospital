@@ -1,3 +1,4 @@
+import { getHospitalName } from "@/lib/branding";
 import Link from "next/link";
 
 /**
@@ -16,7 +17,7 @@ export default function NotFound() {
           href="/en"
           className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
         >
-          Shraddha Hospital feedback
+          {getHospitalName()} · Employee portal
         </Link>
       </div>
     </main>

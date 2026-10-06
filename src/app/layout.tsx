@@ -1,3 +1,4 @@
+import { getHospitalName } from "@/lib/branding";
 import type { Metadata } from "next";
 import { Noto_Sans_Devanagari, Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
@@ -25,10 +26,12 @@ const devanagari = Noto_Sans_Devanagari({
   display: "swap",
 });
 
+const hospitalName = getHospitalName();
+
 export const metadata: Metadata = {
   title: {
-    default: "Shraddha Hospital",
-    template: "%s | Shraddha Hospital",
+    default: hospitalName,
+    template: `%s | ${hospitalName}`,
   },
   description: "Patient experience feedback and reporting.",
   // Feedback and contact data must never end up in a referrer header or a

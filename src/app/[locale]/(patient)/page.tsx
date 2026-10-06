@@ -1,188 +1,117 @@
+import { BrandMark } from "@/components/branding/brand-mark";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { FeedbackLinkCard } from "@/components/home/feedback-link-card";
 import {
   ArrowRight,
-  Check,
+  ChartNoAxesCombined,
   ClipboardList,
-  Clock,
-  HeartPulse,
-  ListChecks,
-  MessageSquareText,
+  LifeBuoy,
+  LockKeyhole,
   ShieldCheck,
-  Sparkles,
-  TriangleAlert,
-  UserRoundX,
 } from "lucide-react";
 import { PUBLIC_SURVEY_SLUG } from "@/modules/survey/constants";
 
-export default async function FeedbackLandingPage({
+export default async function EmployeeHomePage({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("landing");
+  const t = await getTranslations("employeeHome");
   const tBrand = await getTranslations("brand");
-  const tUi = await getTranslations("ui");
 
-  const features = [
-    { icon: Clock, key: "features.time" },
-    { icon: ListChecks, key: "features.questions" },
-    { icon: UserRoundX, key: "features.noAccount" },
-    { icon: ShieldCheck, key: "features.anonymous" },
-  ] as const;
-
-  const recorded = [
-    { icon: ListChecks, key: "privacyItems.services" },
-    { icon: Sparkles, key: "privacyItems.ratings" },
-    { icon: MessageSquareText, key: "privacyItems.comments" },
+  const sections = [
+    { key: "reports", href: "/dashboard", icon: ChartNoAxesCombined },
+    { key: "responses", href: "/dashboard/responses", icon: ClipboardList },
+    { key: "cases", href: "/dashboard/cases", icon: LifeBuoy },
   ] as const;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-8 px-5 py-6 sm:px-8 sm:py-10">
-      <BrandHeader name={tBrand("name")} tagline={tBrand("tagline")} />
+    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 py-6 sm:px-8 sm:py-8">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
+        <Link href="/" className="flex min-w-0 basis-full items-center gap-3 rounded-md sm:basis-auto sm:flex-1">
+          <BrandMark />
+          <div className="min-w-0">
+            <p className="text-base font-semibold tracking-tight break-words">{tBrand("name")}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("portal")}</p>
+          </div>
+        </Link>
+        <Button asChild variant="outline" className="shrink-0">
+          <Link href="/login"><LockKeyhole aria-hidden className="size-4" />{t("signIn")}</Link>
+        </Button>
+      </header>
 
-      <main className="space-y-6">
-        <section className="surface-panel grid overflow-hidden lg:grid-cols-[1.2fr_1fr]">
+      <main className="flex-1 space-y-8 py-8 sm:space-y-10 sm:py-10">
+        <section className="surface-panel grid overflow-hidden lg:grid-cols-[1.35fr_1fr]" aria-labelledby="home-title">
           <div className="flex flex-col justify-center gap-7 p-6 sm:p-10 lg:p-12">
             <div className="space-y-5">
               <p className="section-eyebrow">{t("eyebrow")}</p>
-              <h1 className="max-w-xl text-4xl font-semibold leading-[1.15] tracking-tight text-balance sm:text-5xl">
+              <h1 id="home-title" className="max-w-xl text-4xl font-semibold leading-[1.15] tracking-tight text-balance sm:text-5xl">
                 {t("title")}
               </h1>
-              <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-                {t("description")}
-              </p>
+              <p className="max-w-lg text-base leading-relaxed text-muted-foreground">{t("description")}</p>
             </div>
             <div className="space-y-3">
               <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link href={`/feedback/${PUBLIC_SURVEY_SLUG}`}>
-                  {t("start")}<ArrowRight aria-hidden className="size-4" />
-                </Link>
+                <Link href="/dashboard">{t("openDashboard")}<ArrowRight aria-hidden className="size-4" /></Link>
               </Button>
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock aria-hidden className="size-3.5" />{t("startHint")}
+                <ShieldCheck aria-hidden className="size-3.5 shrink-0" />{t("accessHint")}
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center gap-6 border-t border-border bg-accent/30 p-6 sm:p-10 lg:border-t-0 lg:border-l lg:p-12">
+          <div className="flex flex-col justify-center gap-6 border-t border-border bg-accent/30 p-6 sm:p-10 lg:border-t-0 lg:border-l">
             <div className="flex items-center gap-3">
-              <span className="grid size-12 place-items-center rounded-xl border border-primary/15 bg-card text-primary">
-                <ClipboardList aria-hidden className="size-6" />
+              <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-lg border border-primary/15 bg-card text-primary">
+                <ClipboardList className="size-5" />
               </span>
-              <div>
-                <p className="section-eyebrow">{tBrand("tagline")}</p>
-                <h2 className="mt-1 text-xl font-semibold tracking-tight">{tUi("patientStepsTitle")}</h2>
-              </div>
+              <h2 className="text-lg font-semibold tracking-tight">{t("workflowTitle")}</h2>
             </div>
             <ol className="space-y-5">
-              {["choose", "rate", "submit"].map((key, index) => (
-                <li key={key} className="flex gap-4">
-                  <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full border border-primary/20 bg-card text-xs font-semibold text-primary">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div className="space-y-1 pt-1">
-                    <p className="text-sm font-semibold">{tUi(`patientSteps.${key}.title`)}</p>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{tUi(`patientSteps.${key}.body`)}</p>
+              {["review", "understand", "followUp"].map((key, index) => (
+                <li key={key} className="flex items-start gap-3">
+                  <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full border border-primary/20 bg-card text-xs font-semibold text-primary">{index + 1}</span>
+                  <div className="space-y-1 pt-0.5">
+                    <p className="text-sm font-semibold">{t(`workflow.${key}.title`)}</p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{t(`workflow.${key}.body`)}</p>
                   </div>
                 </li>
               ))}
             </ol>
-            <p className="flex items-center gap-2 border-t border-primary/10 pt-5 text-xs font-medium text-primary">
-              <Check aria-hidden className="size-4" />{t("features.noAccount")}
-            </p>
           </div>
         </section>
 
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          {features.map(({ icon: Icon, key }) => (
-            <li
-              key={key}
-              className="flex items-start gap-3 rounded-lg border border-border bg-card p-4 sm:p-5"
-            >
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground">
-                <Icon aria-hidden className="size-4.5" />
-              </span>
-              <span className="pt-1 text-sm font-medium leading-snug">{t(key)}</span>
-            </li>
-          ))}
-        </ul>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <InfoCard title={t("whyTitle")} icon={Sparkles}>
-            <p className="leading-relaxed text-muted-foreground">{t("whyBody")}</p>
-          </InfoCard>
-
-          <InfoCard title={t("privacyTitle")} icon={ShieldCheck}>
-            <ul className="space-y-2">
-              {recorded.map(({ icon: Icon, key }) => (
-                <li key={key} className="flex items-start gap-2.5 text-sm">
-                  <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
-                  <span>{t(key)}</span>
-                </li>
-              ))}
-            </ul>
-          </InfoCard>
-        </div>
-
-        {/* The single most important reassurance on the page, given that many
-            patients are anxious about hospital data collection. */}
-        <p className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-4 text-sm leading-relaxed text-muted-foreground shadow-card">
-          <ShieldCheck aria-hidden className="mt-0.5 size-4.5 shrink-0 text-primary" />
-          <span>{t("privacyOmit")}</span>
-        </p>
-
-        <aside className="flex items-start gap-3 rounded-xl border border-warning/60 bg-warning/45 p-4 text-sm">
-          <TriangleAlert aria-hidden className="mt-0.5 size-4.5 shrink-0 text-warning-foreground" />
-          <div className="space-y-1">
-            <p className="font-semibold text-warning-foreground">{tBrand("emergencyLabel")}</p>
-            <p className="leading-relaxed text-foreground/85">{tBrand("emergencyBody")}</p>
+        <section aria-labelledby="workspace-title" className="space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="workspace-title" className="text-lg font-semibold tracking-tight">{t("workspaceTitle")}</h2>
+            <p className="text-xs text-muted-foreground">{t("workspaceHint")}</p>
           </div>
-        </aside>
+          <div className="grid gap-4 md:grid-cols-3">
+            {sections.map(({ key, href, icon: Icon }) => (
+              <Link key={key} href={href} className="group flex min-w-0 flex-col gap-5 rounded-xl border border-border bg-card p-5 shadow-xs transition-colors hover:border-primary/40 hover:bg-accent/15 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <span aria-hidden className="grid size-10 place-items-center rounded-lg bg-accent/60 text-primary"><Icon className="size-5" /></span>
+                  <ArrowRight aria-hidden className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-base font-semibold tracking-tight">{t(`sections.${key}.title`)}</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{t(`sections.${key}.body`)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <FeedbackLinkCard href={`/${locale}/feedback/${PUBLIC_SURVEY_SLUG}`} />
       </main>
+
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border py-5 text-xs text-muted-foreground">
+        <p>{tBrand("name")} · {t("portal")}</p>
+        <p>{t("footer")}</p>
+      </footer>
     </div>
-  );
-}
-
-/** Hospital identity. Repeated on the survey and confirmation screens. */
-function BrandHeader({ name, tagline }: { name: string; tagline: string }) {
-  return (
-    <header className="patient-brand">
-      <span
-        aria-hidden
-        className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"
-      >
-        <HeartPulse className="size-6" />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-base font-semibold tracking-tight leading-tight">{name}</p>
-        <p className="truncate text-sm text-muted-foreground">{tagline}</p>
-      </div>
-    </header>
-  );
-}
-
-function InfoCard({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: typeof Sparkles;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className="gap-3 border-border/70 py-5 shadow-card">
-      <CardContent className="space-y-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
-          <Icon aria-hidden className="size-4 text-primary" />
-          {title}
-        </h2>
-        {children}
-      </CardContent>
-    </Card>
   );
 }

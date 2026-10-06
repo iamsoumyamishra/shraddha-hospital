@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandMark } from "@/components/branding/brand-mark";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
@@ -23,7 +24,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   ChevronRight,
   ClipboardList,
-  HeartPulse,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -95,12 +95,7 @@ function SidebarNav({
       <Sidebar collapsible="icon">
         <SidebarHeader className="h-20 justify-center px-4 group-data-[collapsible=icon]:px-2">
           <div className="flex items-center gap-2.5 px-1 py-1">
-            <span
-              aria-hidden
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"
-            >
-              <HeartPulse className="size-5" />
-            </span>
+            <BrandMark className="size-9" />
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-sm font-semibold tracking-tight leading-tight">
                 {tBrand("name")}

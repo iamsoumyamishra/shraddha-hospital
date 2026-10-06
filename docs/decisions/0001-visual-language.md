@@ -117,7 +117,8 @@ neutral slate backgrounds, white surfaces, consistent card padding, smaller
 corner radii, and subtle elevation. The existing teal primary, text, control,
 and rating colours are retained.
 
-- Patient landing: responsive split hero, a three-step explanation, and a clear
+- Initial patient landing (superseded by the employee home below): responsive
+  split hero, a three-step explanation, and a clear
   primary action. The columns stack on smaller screens.
 - Patient form: wider reading area, labelled progress steps, two-column rating
   options on larger screens, and sticky actions with safe-area padding. Mobile
@@ -149,3 +150,46 @@ It introduces no API, database, authentication, scoring, or authorization change
   and rating targets measured 48px high.
 - Authenticated staff browser checks could not complete: the configured test
   password was rejected. Accounts and authentication were not changed.
+
+
+## Employee home page — 2026-10-06
+
+The localized root page (reached from `/`) is now an employee portal rather than
+a patient survey landing page. Its primary action opens the protected staff
+dashboard, with shortcuts to experience reports, responses, and follow-up cases.
+Staff sign-in is also available from the header. This public page renders no
+patient records or aggregate statistics.
+
+The patient survey remains at `/[locale]/feedback/[surveySlug]`. A separate
+patient-feedback section lets employees open that form in a new tab or copy its
+absolute URL using the browser's current origin. Clipboard failures offer a
+manual alternative and copy results are announced to assistive technology.
+No authentication, authorization, API, database, or scoring behaviour changes.
+
+Verification: lint, type-checking, production build, and whitespace checks
+passed. Browser checks confirmed root locale routing, responsive layouts at
+320/390/768/1440px, staff shortcut URLs, unauthenticated dashboard redirect,
+clipboard success and failure, and the patient form opening in a new tab.
+Desktop and mobile employee-home screenshots were visually inspected.
+
+## Configurable identity and original mark — 2026-10-06
+
+The stock heart/pulse icon has been replaced with an original geometric H
+monogram: two upright pillars joined by a contrasting teal bridge, on a white
+rounded tile. A single SVG supplies both UI brand marks and the browser tab icon.
+The asset remains sharp at sidebar, mobile, and favicon sizes without a raster
+image or an external font dependency.
+
+Hospital names are deployment configuration rather than hard-coded interface
+copy. `HOSPITAL_NAME` is resolved on the server and supplied to localized brand
+messages and metadata. The explicit fallback is `Hospital Name`, including for
+empty or whitespace-only values. Authentication, scoring, persistence, and
+hospital data scope are unaffected. Setup is documented in README.md,
+.env.example, and docs/deployment.md.
+
+Verification: lint, type-checking, production build, and whitespace checks passed.
+The name resolver passed checks for missing, empty, whitespace-only, trimmed,
+and Unicode values. Browser checks confirmed configured/fallback names, page
+titles, SVG loading and favicon metadata on employee, login, and patient pages
+at 320px and 1440px. Screenshots were inspected; the employee header stacks its
+sign-in action on phones to leave enough room for long hospital names.

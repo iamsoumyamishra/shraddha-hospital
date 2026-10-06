@@ -1,8 +1,9 @@
+import { BrandMark } from "@/components/branding/brand-mark";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { getStaffContext } from "@/lib/authorization";
 import { StaffSignInForm } from "@/components/auth/staff-sign-in-form";
-import { ArrowRight, ClipboardList, HeartPulse, ShieldCheck } from "lucide-react";
+import { ArrowRight, ClipboardList, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,9 @@ export default async function StaffLoginPage({
       <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border bg-card shadow-raised lg:grid-cols-2">
         <section className="flex flex-col justify-between gap-10 border-b border-border bg-accent/30 p-6 sm:p-10 lg:border-r lg:border-b-0 lg:p-12">
           <div className="flex items-center gap-3">
-            <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <HeartPulse className="size-6" />
-            </span>
-            <div>
-              <p className="font-semibold tracking-tight">{tBrand("name")}</p>
+            <BrandMark />
+            <div className="min-w-0">
+              <p className="font-semibold tracking-tight break-words">{tBrand("name")}</p>
               <p className="text-xs text-muted-foreground">{tUi("loginLabel")}</p>
             </div>
           </div>
