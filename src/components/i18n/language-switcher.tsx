@@ -13,7 +13,7 @@ export function LocaleAvailabilityProvider({ locales, children }: { locales: Loc
   }, [locale]);
   return <Availability.Provider value={locales}>{children}</Availability.Provider>;
 }
-export function LanguageSwitcher({ locales, surveyVersionId, disabled = false }: { locales?: Locale[]; surveyVersionId?: string; disabled?: boolean }) {
+export function LanguageSwitcher({ locales, surveyVersionId, disabled = false, onSelect }: { locales?: Locale[]; surveyVersionId?: string; disabled?: boolean; onSelect?: (locale: Locale) => void }) {
   const enabled = useContext(Availability);
   const available = locales ?? enabled;
   const locale = useLocale();
@@ -29,6 +29,7 @@ export function LanguageSwitcher({ locales, surveyVersionId, disabled = false }:
       onChange={(event) => {
         const next = event.target.value as Locale;
         if (!available.includes(next)) return;
+        onSelect?.(next);
         const query = new URLSearchParams(params.toString());
         if (surveyVersionId) query.set("version", surveyVersionId);
         startTransition(() => router.replace(`${pathname}${query.size ? `?${query}` : ""}`, { locale: next, scroll: false }));

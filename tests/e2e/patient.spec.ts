@@ -37,6 +37,8 @@ async function answerAllQuestions(page: Page, options: { notApplicable?: number[
 async function completePrivacyAndServices(page: Page) {
   await expect(page.getByText("Step 1 of 5")).toBeVisible();
 
+  // Language selection always precedes the privacy notice.
+  // Tests call this helper after choosing a language.
   // The notice must be acknowledged before the form can advance.
   await page.getByRole("button", { name: "Next" }).click();
   await expect(formAlert(page)).toContainText("Please confirm you have read");
@@ -53,8 +55,37 @@ async function completePrivacyAndServices(page: Page) {
 }
 
 test.describe("patient survey", () => {
+  test("allows selecting English when the browser has no randomUUID API", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(() => {
+      Object.defineProperty(globalThis.crypto, "randomUUID", { value: undefined, configurable: true });
+    });
+    await page.goto(SURVEY_PATH);
+    const option = page.getByRole("radio", { name: "English", exact: true });
+    await page.getByText("English", { exact: true }).click();
+    await expect(option).toBeChecked();
+    await expect(page.getByRole("button", { name: "Continue to feedback" })).toBeEnabled();
+    await page.getByRole("button", { name: "Continue to feedback" }).click();
+    await expect(page.getByText("Step 1 of 5")).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("asks for language before showing the survey", async ({ page }) => {
+    await page.goto(SURVEY_PATH);
+    await expect(page.getByRole("heading", { name: "Choose your language" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue to feedback" })).toBeDisabled();
+    await expect(page.getByText("Step 1 of 5")).toHaveCount(0);
+    await expect(page.getByLabel("I have read the notice above.")).toHaveCount(0);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback" }).click();
+    await expect(page.getByText("Step 1 of 5")).toBeVisible();
+  });
+
   test("completes the survey with only a thank-you confirmation", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
 
     await completePrivacyAndServices(page);
     await expect(page.getByText("Step 3 of 5")).toBeVisible();
@@ -83,6 +114,8 @@ test.describe("patient survey", () => {
 
   test("shows only thanks for an incomplete acknowledgement too", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
     await answerAllQuestions(page);
     await page.getByRole("button", { name: "Next" }).click();
@@ -100,6 +133,8 @@ test.describe("patient survey", () => {
 
   test("requires an answer for every question", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
 
     // The counter must say how many are still outstanding.
@@ -119,6 +154,8 @@ test.describe("patient survey", () => {
 
   test("accepts not-applicable answers without displaying a score", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
 
     // Blank the whole reception category (2 questions).
@@ -136,6 +173,8 @@ test.describe("patient survey", () => {
 
   test("blocks the submit when consent is given without contact details", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
     await answerAllQuestions(page);
     await page.getByRole("button", { name: "Next" }).click();
@@ -152,6 +191,8 @@ test.describe("patient survey", () => {
 
   test("submits without any contact details when consent is withheld", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
     await answerAllQuestions(page);
     await page.getByRole("button", { name: "Next" }).click();
@@ -168,6 +209,8 @@ test.describe("patient survey", () => {
 
   test("keeps answers when moving backwards and forwards", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
     await answerAllQuestions(page);
 
@@ -183,6 +226,8 @@ test.describe("patient survey", () => {
 
   test("shows a privacy notice that asks for no identifying data", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
 
     const notice = page.locator("main, body").first();
     await expect(notice).toContainText("We do not ask for your name");
@@ -193,6 +238,8 @@ test.describe("patient survey", () => {
 
   test("is usable at a phone viewport without horizontal scrolling", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
     await expect(page.getByText("Step 3 of 5")).toBeVisible();
 
@@ -204,6 +251,8 @@ test.describe("patient survey", () => {
 
   test("is keyboard navigable to the first rating", async ({ page }) => {
     await page.goto(SURVEY_PATH);
+    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
 
     await page.locator("fieldset").first().getByRole("radio", { name: "5 — Very satisfied" }).focus();

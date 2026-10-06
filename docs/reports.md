@@ -39,8 +39,8 @@ separate backend work. Share files only with authorized recipients.
   and reviewed languages. Pages are raster images: PDF text is not selectable,
   searchable or tagged for screen readers. The HTML dashboard is the accessible
   alternative. Long table labels use ellipses.
-- Report wording follows the UI locale. New Hindi/Marathi strings are drafts
-  covered by the existing complete-catalog review gates.
+- Dashboard reports stay in English. Legacy Hindi/Marathi report strings remain
+  unused; their browser renderer tests do not publish a multilingual dashboard.
 - Future translations that exceed a page cause a visible retryable error rather
   than a clipped PDF. Temporary download URLs are revoked after use.
 

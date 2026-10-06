@@ -6,7 +6,6 @@ import { prisma } from "../../src/lib/db";
 import { presentationSchema, surveySourceMessages } from "../../src/modules/survey/localization";
 import { scoringPolicyRulesSchema } from "../../src/modules/scoring/policy";
 import { changedKeys, contentHash, isReviewed, sourceHashes, translationIssues, type FlatMessages, type TranslationReview } from "../../src/i18n/translation-workflow";
-import { translateDraft, TranslationProviderError } from "./provider";
 
 const bundleSchema = z.object({ surveyVersionId: z.string().uuid(), locale: z.enum(["hi", "mr"]),
   sourceHash: z.string(), sourceHashes: z.record(z.string(), z.string()),
@@ -58,15 +57,12 @@ async function main() {
   if (command === "sync") {
     const keys = changedKeys(source, bundle.content, bundle.sourceHashes);
     if (!keys.length) { console.log("No changed survey wording."); return; }
-    const changed = Object.fromEntries(keys.map((key) => [key, source[key]!]));
-    const generated: FlatMessages = await translateDraft(changed, bundle.locale);
-    if (translationIssues(changed, generated).length) throw new Error("Generated draft failed validation");
-    bundle.content = Object.fromEntries(Object.keys(source).map((key) => [key, generated[key] ?? bundle.content[key] ?? ""]));
+    bundle.content = Object.fromEntries(Object.keys(source).map((key) => [key, keys.includes(key) ? "" : bundle.content[key] ?? ""]));
     bundle.sourceHash = contentHash(source);
     bundle.sourceHashes = sourceHashes(source);
     bundle.review = null;
     await save(file, bundle);
-    console.log(`Saved ${keys.length} translated survey drafts. Human review is required.`);
+    console.log(`Saved ${keys.length} manual survey draft fields. Human review is required.`);
     return;
   }
   if (bundle.sourceHash !== contentHash(source)) throw new Error("Stale English revision; export/sync again");
@@ -100,4 +96,4 @@ async function main() {
   });
   console.log("Published reviewed wording for this survey version. UI review and hospital enabled locales still gate patient availability.");
 }
-main().catch((error: unknown) => { if (error instanceof TranslationProviderError) console.error(error.message); console.error("Survey localization failed. Check arguments, review state and database configuration. Published wording cannot be replaced."); process.exitCode = 1; }).finally(() => prisma.$disconnect());
+main().catch(() => { console.error("Survey localization failed. Check arguments, review state and database configuration. Published wording cannot be replaced."); process.exitCode = 1; }).finally(() => prisma.$disconnect());

@@ -1,4 +1,3 @@
-import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { BrandMark } from "@/components/branding/brand-mark";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -40,7 +39,6 @@ export default async function EmployeeHomePage({
             <p className="mt-0.5 text-xs text-muted-foreground">{t("portal")}</p>
           </div>
         </Link>
-        <LanguageSwitcher />
         <Button asChild variant="outline" className="shrink-0">
           <Link href="/login"><LockKeyhole aria-hidden className="size-4" />{t("signIn")}</Link>
         </Button>

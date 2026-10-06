@@ -263,7 +263,8 @@
     "surveyProgress": "Your progress",
     "surveyHint": "Take your time. Choose “Not applicable” for a question that does not apply to your visit.",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "openingFeedback": "Opening feedback form…"
   },
   "employeeHome": {
     "portal": "Employee portal",
@@ -320,7 +321,10 @@
   },
   "language": {
     "label": "Language",
-    "switching": "Changing language…"
+    "switching": "Changing language…",
+    "chooseTitle": "Choose your language",
+    "chooseHint": "Select your preferred language before starting the feedback form.",
+    "continue": "Continue to feedback"
   },
   "report": {
     "download": "Download report",

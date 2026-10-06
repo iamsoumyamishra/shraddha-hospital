@@ -15,6 +15,7 @@ import { cn } from "cn";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { useFeedbackDraft, type FeedbackDraft } from "./draft-provider";
+import { FeedbackLanguageSelection } from "./language-selection";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import type { Locale } from "@/i18n/catalog";
 
@@ -48,7 +49,8 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const tUi = useTranslations("ui");
 
   const { draft, setter } = useFeedbackDraft(survey.id, survey.visitTypes[0] ?? "outpatient");
-  const { step, privacyAck, visitType, servicesUsed, answers, overallRating, comment, contactConsent, contact, error, submitting, acknowledgement, idempotencyKey } = draft;
+  const { languageChoice, step, privacyAck, visitType, servicesUsed, answers, overallRating, comment, contactConsent, contact, error, submitting, acknowledgement, idempotencyKey } = draft;
+  const setLanguageChoice = setter("languageChoice");
   const setStep = setter("step");
   const setPrivacyAck = setter("privacyAck");
   const setVisitType = setter("visitType");
@@ -114,6 +116,13 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
         </CardHeader>
       </Card>
     );
+  }
+
+  if (!languageChoice) {
+    return <FeedbackLanguageSelection locales={survey.availableLocales} surveyVersionId={survey.id} onChoose={setLanguageChoice} />;
+  }
+  if (languageChoice !== survey.locale) {
+    return <p role="status" className="py-10 text-center text-muted-foreground">{tUi("openingFeedback")}</p>;
   }
 
   function setAnswer(questionId: string, value: AnswerState) {
@@ -228,7 +237,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
           <p className="truncate text-sm text-muted-foreground">{tBrand("tagline")}</p>
         </div>
       </header>
-      <LanguageSwitcher locales={survey.availableLocales} surveyVersionId={survey.id} disabled={submitting} />
+      <LanguageSwitcher locales={survey.availableLocales} surveyVersionId={survey.id} disabled={submitting} onSelect={setLanguageChoice} />
       </div>
 
       <div className="space-y-3">

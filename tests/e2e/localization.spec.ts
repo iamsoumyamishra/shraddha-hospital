@@ -1,7 +1,38 @@
 import { expect, test } from "@playwright/test";
 
+for (const [locale, name, privacyLabel] of [
+  ["hi", "हिन्दी", "मैंने ऊपर दी गई सूचना पढ़ ली है।"],
+  ["mr", "मराठी", "मी वरील सूचना वाचली आहे."],
+] as const) {
+  test(`starts feedback in ${locale} after the initial language choice`, async ({ page }) => {
+    await page.goto("/en/feedback/outpatient-experience");
+    const option = page.getByRole("radio", { name, exact: true });
+    test.skip(await option.count() === 0, "Requires isolated reviewed survey fixtures.");
+    await expect(page.getByLabel("I have read the notice above.")).toHaveCount(0);
+    await option.click();
+    await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/${locale}/feedback/`));
+    await expect(page.locator("html")).toHaveAttribute("lang", locale);
+    await expect(page.getByLabel(privacyLabel)).toBeVisible();
+    expect(new URL(page.url()).searchParams.get("version")).toMatch(/^[0-9a-f-]{36}$/);
+  });
+}
+
+test("employee and login pages stay English after patient language changes", async ({ page }) => {
+  await page.goto("/hi");
+  await expect(page).toHaveURL(/\/en\/?$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+  await page.goto("/mr/login");
+  await expect(page).toHaveURL(/\/en\/login$/);
+  await expect(page.getByRole("heading", { name: "Staff sign in" })).toBeVisible();
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+});
+
 test("language switching preserves the complete draft, version and retry key", async ({ page }) => {
   await page.goto("/en/feedback/outpatient-experience");
+  await page.getByRole("radio", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
   const language = page.getByRole("combobox", { name: "Language", exact: true });
   const available = await language.locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
   test.skip(!available.includes("hi") || !available.includes("mr"), "Requires isolated reviewed localization fixtures; production drafts stay unpublished.");

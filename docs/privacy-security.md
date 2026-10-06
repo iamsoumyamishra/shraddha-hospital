@@ -5,14 +5,9 @@ contacts and response IDs. Generation is local to the authenticated browser;
 downloads are not server-audited and must be shared only with authorized staff.
 See [reports](reports.md) for suppression and scope limits.
 
-Google Cloud Translation is disabled by default and is invoked only by the operator translation
-command. Its input is allowlisted public interface/survey text. Comments, answers,
-contacts and tokens are never passed to the adapter. Translation credentials are
-server-side environment values. Requests reject redirects/unexpected inference
-hosts, and errors do not print service responses or keys.
-
-Review this flow before enabling the optional external service. It does not
-translate patient comments, use speech services or claim legal compliance.
+No translation API is used. Translations are manually maintained public wording,
+reviewed before publication, and served locally. Translation credentials and
+provider code have been removed. Audio and comment translation are not implemented.
 
 Form drafts use volatile React state, including optional contacts. Language
 navigation preserves this state without localStorage/sessionStorage, analytics

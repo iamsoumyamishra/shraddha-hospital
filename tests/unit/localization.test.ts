@@ -9,6 +9,7 @@ import { POLICY_V1 } from "@/modules/scoring/policy";
 import { surveySourceMessages } from "@/modules/survey/localization";
 import { changedKeys, contentHash, flattenMessages, isReviewed, nestMessages, sourceHashes, translationIssues } from "@/i18n/translation-workflow";
 import { submitFeedbackSchema } from "@/modules/feedback/schema";
+import { feedbackMessages } from "@/i18n/feedback-messages";
 
 describe("translation publication", () => {
   const source = { title: "Feedback", count: "{count} responses" };
@@ -36,6 +37,15 @@ describe("translation publication", () => {
   it("has complete draft catalogs with identical interpolation variables", () => {
     expect(translationIssues(flattenMessages(en), flattenMessages(hi))).toEqual([]);
     expect(translationIssues(flattenMessages(en), flattenMessages(mr))).toEqual([]);
+  });
+  it("requires only feedback wording for language review and ignores staff/report changes", () => {
+    const english = feedbackMessages(en);
+    const hindi = feedbackMessages(hi);
+    const review = { sourceHash: contentHash(english), translationHash: contentHash(hindi), reviewedBy: "Synthetic reviewer", reviewedAt: "2026-10-06T00:00:00Z" };
+    expect(isReviewed(english, hindi, review)).toBe(true);
+    expect(isReviewed(feedbackMessages({ ...en, dashboard: { title: "Changed staff page" } }), hindi, review)).toBe(true);
+    expect(isReviewed(feedbackMessages({ ...en, survey: { ...en.survey, confirmationTitle: "New patient wording" } }), hindi, review)).toBe(false);
+    expect(Object.keys(english).some((key) => key.startsWith("report.") || key.startsWith("dashboard."))).toBe(false);
   });
   it("has complete unreviewed survey drafts matching the exact seeded source", () => {
     const source = surveySourceMessages({ ...SURVEY, visitTypes: [...SURVEY.visitTypes], questions: [...QUESTIONS],

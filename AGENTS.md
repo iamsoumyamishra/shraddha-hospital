@@ -83,7 +83,7 @@ Use Node runtime for database/auth routes unless the selected dependencies expli
 | Package manager | pnpm with committed lockfile |
 | Deployment | Docker application and managed PostgreSQL |
 | Optional later jobs | Redis and BullMQ |
-| Optional draft translations | Google Cloud Translation Basic v2 via the operator CLI; disabled by default, see docs/localization.md |
+| Feedback translations | Manually authored catalogs and reviewed survey bundles; no translation API, see docs/localization.md |
 
 Use compatible stable dependency versions and consult current official documentation when implementing integrations. Do not mix APIs from incompatible Prisma, Next.js, or authentication versions. Do not add microservices, vector databases, WebSockets, or AI scoring for the MVP.
 

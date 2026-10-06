@@ -1,6 +1,5 @@
 "use client";
 
-import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 
 import { BrandMark } from "@/components/branding/brand-mark";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -184,8 +183,7 @@ function SidebarNav({
             <span className="hidden text-xs text-muted-foreground md:block">{roleLabel}</span>
             <span aria-hidden className="grid size-8 place-items-center rounded-full border border-border bg-muted text-xs font-semibold">{initials(displayName)}</span>
           </div>
-          <LanguageSwitcher />
-        </header>
+          </header>
         <main id="staff-content" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1600px] flex-1 p-4 outline-none sm:p-6 lg:p-8">{children}</main>
       </div>
     </>

@@ -8,7 +8,8 @@ import { randomBytes } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contentHash, flattenMessages, translationIssues } from "../../src/i18n/translation-workflow";
+import { contentHash, translationIssues } from "../../src/i18n/translation-workflow";
+import { feedbackMessages } from "../../src/i18n/feedback-messages";
 import { presentationSchema, surveySourceMessages } from "../../src/modules/survey/localization";
 import { scoringPolicyRulesSchema } from "../../src/modules/scoring/policy";
 
@@ -37,14 +38,14 @@ async function main() {
     }
     await symlink(join(process.cwd(), "node_modules"), join(directory, "node_modules"));
     await mkdir(join(directory, ".next"));
-    const english = flattenMessages(JSON.parse(await readFile("messages/en.json", "utf8")));
+    const english = feedbackMessages(JSON.parse(await readFile("messages/en.json", "utf8")));
     const reviews = Object.fromEntries(await Promise.all(["hi", "mr"].map(async (locale) => [locale, {
-      sourceHash: contentHash(english), translationHash: contentHash(flattenMessages(JSON.parse(await readFile(`messages/${locale}.json`, "utf8")))),
+      sourceHash: contentHash(english), translationHash: contentHash(feedbackMessages(JSON.parse(await readFile(`messages/${locale}.json`, "utf8")))),
       reviewedBy: "Synthetic E2E fixture ONLY", reviewedAt: new Date().toISOString(),
     }])));
     await writeFile(join(directory, "messages/reviews.json"), `${JSON.stringify(reviews, null, 2)}\n`);
     // Only the temporary build receives these test credentials. Never log them.
-    await writeFile(join(directory, ".env"), `DATABASE_URL=${JSON.stringify(testUrl)}\nBETTER_AUTH_SECRET=${JSON.stringify(randomBytes(32).toString("hex"))}\nBETTER_AUTH_URL="http://localhost:3111"\nNEXT_PUBLIC_APP_URL="http://localhost:3111"\nPUBLIC_FEEDBACK_MODE="qr"\nHOSPITAL_ENABLED_LOCALES="en,hi,mr"\nHOSPITAL_DEFAULT_LOCALE="en"\nTRANSLATION_PROVIDER="disabled"\n`, { mode: 0o600 });
+    await writeFile(join(directory, ".env"), `DATABASE_URL=${JSON.stringify(testUrl)}\nBETTER_AUTH_SECRET=${JSON.stringify(randomBytes(32).toString("hex"))}\nBETTER_AUTH_URL="http://localhost:3111"\nNEXT_PUBLIC_APP_URL="http://localhost:3111"\nPUBLIC_FEEDBACK_MODE="qr"\nHOSPITAL_ENABLED_LOCALES="en,hi,mr"\nHOSPITAL_DEFAULT_LOCALE="en"\n`, { mode: 0o600 });
     console.log(directory);
   } finally { await prisma.$disconnect(); }
 }

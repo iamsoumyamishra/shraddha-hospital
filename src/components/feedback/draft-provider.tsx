@@ -1,7 +1,11 @@
 "use client";
 import { createContext, useContext, useState, type Dispatch, type SetStateAction } from "react";
 
+import type { Locale } from "@/i18n/catalog";
+import { createFeedbackIdempotencyKey } from "./idempotency-key";
+
 export interface FeedbackDraft {
+  languageChoice: Locale | null;
   step: number;
   privacyAck: boolean;
   visitType: string;
@@ -26,10 +30,10 @@ export function FeedbackDraftProvider({ children }: { children: React.ReactNode 
 }
 export function useFeedbackDraft(versionId: string, firstVisitType: string) {
   const context = useContext(Drafts);
-  const [initial] = useState<FeedbackDraft>(() => ({ step: 0, privacyAck: false, visitType: firstVisitType,
+  const [initial] = useState<FeedbackDraft>(() => ({ languageChoice: null, step: 0, privacyAck: false, visitType: firstVisitType,
     servicesUsed: [], answers: {}, overallRating: null, comment: "", contactConsent: false,
     contact: { displayName: "", phone: "", email: "" }, error: null, submitting: false,
-    acknowledgement: null, idempotencyKey: crypto.randomUUID() }));
+    acknowledgement: null, idempotencyKey: createFeedbackIdempotencyKey() }));
   if (!context) throw new Error("FeedbackDraftProvider missing");
   const { store, setStore } = context;
   const draft = store[versionId] ?? initial;

@@ -14,8 +14,14 @@ The next-intl provider lives inside the locale layout so messages change during
 navigation. No database, hashing or translation-service implementation enters
 client bundles.
 
-Translation generation is an optional operator CLI under `scripts/i18n`, outside
-the patient request path. Public English text is translated into drafts, reviewed,
-and then deployed/published. Database survey bundles are pinned to immutable
+Translation authoring uses a manual operator CLI under `scripts/i18n`. Changed
+feedback wording becomes empty draft fields for a human translator, then is
+reviewed and deployed/published. No external translation adapter remains.
+Database survey bundles are pinned to immutable
 survey versions; frontend version selectors cannot choose tenant or scoring policy.
 See [localization](localization.md) for current limits and the publication workflow.
+
+Only feedback routes negotiate patient locales. Other routes redirect to English.
+The first feedback screen records the chosen language in the volatile versioned
+draft before showing the privacy notice. Approval hashes cover only patient
+interface text, so staff content changes do not invalidate feedback translations.
