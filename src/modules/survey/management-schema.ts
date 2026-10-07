@@ -21,6 +21,7 @@ export type SurveyDraftInput = z.infer<typeof surveyDraftSchema>;
 export const managementRequestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("clone"), surveyId: z.string().uuid() }).strict(),
   z.object({ action: z.literal("save"), surveyId: z.string().uuid(), revision: z.string().length(64), draft: surveyDraftSchema }).strict(),
+  z.object({ action: z.literal("reset"), surveyId: z.string().uuid(), revision: z.string().length(64) }).strict(),
   z.object({ action: z.literal("publish"), surveyId: z.string().uuid(), revision: z.string().length(64) }).strict(),
   z.object({ action: z.literal("translate"), surveyId: z.string().uuid(), english: z.string().trim().min(1).max(1000), locale: z.enum(["hi", "mr"]) }).strict(),
 ]);

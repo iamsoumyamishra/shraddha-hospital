@@ -10,6 +10,7 @@ export type AuditAction =
   | "CREATE_SURVEY_DRAFT"
   | "UPDATE_SURVEY_DRAFT"
   | "PUBLISH_SURVEY"
+  | "RESET_SURVEY_DEFAULTS"
   | "EXPORT";
 
 export interface AuditEntry {

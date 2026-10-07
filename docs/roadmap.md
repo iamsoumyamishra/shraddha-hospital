@@ -29,3 +29,7 @@ Implemented: optional per-question Gemini AI Translate dropdown for Hindi/Marath
 drafts from English, protected by hospital-admin authorization and a server-only
 key. Generated text is unsaved and unreviewed; full language publication still
 requires the manual review workflow.
+
+Implemented: administrator-confirmed Reset to defaults publishes a new scoped
+English questionnaire with all original questions and prefilled Hindi/Marathi
+drafts while preserving historical responses and scoring.

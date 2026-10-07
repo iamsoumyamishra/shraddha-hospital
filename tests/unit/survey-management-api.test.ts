@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ staff: vi.fn(), clone: vi.fn(), save: vi.fn(), publish: vi.fn(), list: vi.fn(), assertTranslate: vi.fn(), translate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ staff: vi.fn(), clone: vi.fn(), save: vi.fn(), publish: vi.fn(), list: vi.fn(), assertTranslate: vi.fn(), translate: vi.fn(), reset: vi.fn() }));
 vi.mock("@/lib/authorization", () => ({ requireStaffContext: mocks.staff,
   NotAuthenticatedError: class extends Error {}, NotAuthorisedError: class extends Error {} }));
 vi.mock("@/lib/env", () => ({ env: () => ({ BETTER_AUTH_URL: "https://hospital.example" }) }));
-vi.mock("@/modules/survey/manage-survey", () => ({ cloneSurvey: mocks.clone, saveSurveyDraft: mocks.save, publishSurveyDraft: mocks.publish, listManagedSurveys: mocks.list,
+vi.mock("@/modules/survey/manage-survey", () => ({ resetSurveyDefaults: mocks.reset, cloneSurvey: mocks.clone, saveSurveyDraft: mocks.save, publishSurveyDraft: mocks.publish, listManagedSurveys: mocks.list,
   assertCanTranslateDraft: mocks.assertTranslate, SurveyManagementError: class extends Error { status = 409; } }));
 vi.mock("@/modules/survey/translate-question", () => ({ translateQuestion: mocks.translate, QuestionTranslationError: class extends Error { status = 502; } }));
 import { GET, POST } from "@/app/api/staff/surveys/route";
@@ -17,7 +17,7 @@ function request(body: unknown, origin = "https://hospital.example") {
 }
 
 beforeEach(() => {
-  vi.resetAllMocks(); resetRateLimits(); mocks.staff.mockResolvedValue({ staffUserId: "admin" }); mocks.clone.mockResolvedValue({ id }); mocks.translate.mockResolvedValue("अनुवाद");
+  vi.resetAllMocks(); resetRateLimits(); mocks.staff.mockResolvedValue({ staffUserId: "admin" }); mocks.clone.mockResolvedValue({ id }); mocks.reset.mockResolvedValue({ id }); mocks.translate.mockResolvedValue("अनुवाद");
 });
 
 describe("survey management API", () => {
@@ -60,6 +60,14 @@ describe("survey management API", () => {
     expect(mocks.assertTranslate).toHaveBeenCalledWith({ staffUserId: "admin" }, id);
     expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.publish).not.toHaveBeenCalled();
     expect((await POST(request({ ...payload, locale: "en" }))).status).toBe(422);
+  });
+  it("resets only through authenticated scoped domain logic", async () => {
+    const revision = "a".repeat(64);
+    expect((await POST(request({ action: "reset", surveyId: id, revision }))).status).toBe(200);
+    expect(mocks.reset).toHaveBeenCalledWith({ staffUserId: "admin" }, id, revision);
+    expect((await POST(request({ action: "reset", surveyId: id, revision, hospitalId: "foreign" }))).status).toBe(422);
+    mocks.reset.mockRejectedValue(new NotAuthorisedError());
+    expect((await POST(request({ action: "reset", surveyId: id, revision }))).status).toBe(403);
   });
   it("rate limits staff translation requests", async () => {
     const payload = { action: "translate", surveyId: id, english: "Question", locale: "hi" };

@@ -70,6 +70,23 @@ No schema migration is required. No deployment runs
 automatically when an administrator changes a survey; published database questions
 appear on new requests. Code/catalog changes still require a deployment.
 
+## Restore defaults
+
+**Reset to defaults** restores the original 15 questions from `prisma/seed-data.ts`
+with the checked-in Hindi/Marathi question wording from `translations/surveys/`.
+An authenticated hospital-wide administrator confirms the reset. It publishes a
+new English version for only the selected hospital/survey slug, retaining the
+existing scoring policy and category weights. Previous published questionnaires,
+answers and scores remain intact; existing drafts in that scope become retired
+rather than being deleted. Unsaved editor changes are discarded after success.
+The default translations are prefilled DRAFT wording, without fabricated review
+or patient-language approval. Full translation review is still required.
+
+The reset is atomic, requires the original nine categories and a compatible
+scoring policy, rejects stale revisions, and records `RESET_SURVEY_DEFAULTS`
+with the acting administrator. It does not reseed accounts, demo responses or
+other hospitals. No migration or environment change is required.
+
 ## Verification
 
 Integration tests cover draft concurrency, tenant/role isolation, stale revisions,

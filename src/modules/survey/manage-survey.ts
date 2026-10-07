@@ -1,5 +1,8 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { CATEGORY_DEFINITIONS, QUESTIONS, SERVICES_USED, SURVEY } from "../../../prisma/seed-data";
+import hindiDefaults from "../../../translations/surveys/outpatient-experience-v1.hi.json";
+import marathiDefaults from "../../../translations/surveys/outpatient-experience-v1.mr.json";
+import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { NotAuthorisedError, type StaffContext } from "@/lib/authorization";
 import type { Prisma } from "@/generated/prisma/client";
@@ -150,5 +153,44 @@ export async function publishSurveyDraft(staff: StaffContext, id: string, revisi
     const published = await tx.surveyVersion.update({ where: { id }, data: { status: "PUBLISHED", publishedAt: new Date() }, include });
     await audit(tx, staff, survey, "PUBLISH_SURVEY");
     return serialize(published);
+  }, { timeout: 20000 });
+}
+
+/** Explicit scoped reset: publish a new English version, preserve old records. */
+export async function resetSurveyDefaults(staff: StaffContext, id: string, revision: string): Promise<ManagedSurvey> {
+  return prisma.$transaction(async (tx) => {
+    const source = await lockSurvey(tx, staff, id);
+    if (serialize(source).revision !== revision) throw new SurveyManagementError("This survey changed in another session. Reload before resetting.", 409);
+    const categoryByKey = new Map(source.categories.map((category) => [category.key, category]));
+    if (CATEGORY_DEFINITIONS.some((category) => !categoryByKey.has(category.key))) throw new SurveyManagementError("Default questions require the original nine service categories.");
+    const rules = scoringPolicyRulesSchema.parse(source.scoringPolicyVersion.rules);
+    if (source.scoringPolicyVersion.hospitalId !== source.hospitalId || rules.completion.minScoredCategories > CATEGORY_DEFINITIONS.length) throw new SurveyManagementError("The current scoring policy cannot publish the default questionnaire.");
+    if (CATEGORY_DEFINITIONS.some((category) => { const weight = Number(categoryByKey.get(category.key)!.weight); return !Number.isFinite(weight) || weight <= 0; })) throw new SurveyManagementError("Category weights must be positive.");
+    await tx.$queryRaw`SELECT id FROM hospitals WHERE id = ${source.hospitalId}::uuid FOR UPDATE`;
+    const latest = await tx.surveyVersion.aggregate({ where: { hospitalId: source.hospitalId, slug: source.slug }, _max: { version: true } });
+    // Retain superseded drafts rather than deleting their questions or translations.
+    await tx.surveyVersion.updateMany({ where: { hospitalId: source.hospitalId, slug: source.slug, status: "DRAFT" }, data: { status: "RETIRED" } });
+    const created = await tx.surveyVersion.create({ data: { hospitalId: source.hospitalId, slug: source.slug, version: (latest._max.version ?? 0) + 1,
+      title: SURVEY.title, description: SURVEY.description, visitTypes: [...SURVEY.visitTypes],
+      patientPresentation: { services: SERVICES_USED.map((service) => ({ ...service })), categoryLabels: Object.fromEntries(CATEGORY_DEFINITIONS.map((category) => [category.key, category.label])) },
+      scoringPolicyVersionId: source.scoringPolicyVersionId, status: "PUBLISHED", publishedAt: new Date() } });
+    const categories = CATEGORY_DEFINITIONS.map((category) => ({ id: randomUUID(), surveyVersionId: created.id, key: category.key,
+      weight: categoryByKey.get(category.key)!.weight, isCore: categoryByKey.get(category.key)!.isCore, sortOrder: category.sortOrder }));
+    const questions = QUESTIONS.map((question) => ({ id: randomUUID(), surveyVersionId: created.id,
+      categoryId: categories.find((category) => category.key === question.categoryKey)!.id, key: question.key, sortOrder: question.sortOrder }));
+    const translations = QUESTIONS.flatMap((question, index) => {
+      const key = `questions.${question.key}`;
+      const hi = (hindiDefaults.content as Record<string, string>)[key];
+      const mr = (marathiDefaults.content as Record<string, string>)[key];
+      if (!hi || !mr) throw new SurveyManagementError("A default question translation is missing.");
+      return [ { questionId: questions[index]!.id, locale: "en", prompt: question.prompt, status: "PUBLISHED" as const, reviewedAt: new Date(), reviewedById: staff.staffUserId },
+        { questionId: questions[index]!.id, locale: "hi", prompt: hi, status: "DRAFT" as const },
+        { questionId: questions[index]!.id, locale: "mr", prompt: mr, status: "DRAFT" as const } ];
+    });
+    await tx.category.createMany({ data: categories });
+    await tx.question.createMany({ data: questions });
+    await tx.questionTranslation.createMany({ data: translations });
+    await audit(tx, staff, created, "RESET_SURVEY_DEFAULTS");
+    return serialize(await tx.surveyVersion.findUniqueOrThrow({ where: { id: created.id }, include }));
   }, { timeout: 20000 });
 }

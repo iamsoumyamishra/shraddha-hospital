@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Copy, Plus, Save, Trash2, Send, Loader2, Sparkles, ChevronDown } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Plus, Save, Trash2, Send, Loader2, Sparkles, ChevronDown, RotateCcw } from "lucide-react";
 import type { ManagedSurvey } from "@/modules/survey/manage-survey";
 import type { SurveyDraftInput } from "@/modules/survey/management-schema";
 import { createFeedbackIdempotencyKey } from "@/components/feedback/idempotency-key";
@@ -25,6 +25,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [confirmSwitch, setConfirmSwitch] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
@@ -46,7 +47,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
     setQuestionLanguages({}); setSelected(id); setDraft(surveys.find((item) => item.id === id)?.draft ?? null); setError(null); setNotice(null); setAiFeedback(null);
   }
 
-  async function perform(action: "clone" | "save" | "publish") {
+  async function perform(action: "clone" | "save" | "publish" | "reset") {
     if (!survey || !draft || busy) return;
     setPending(true); setError(null); setNotice(null);
     try {
@@ -58,9 +59,9 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
       if (!response.ok || !result.survey) throw new Error(result.error ?? "Unable to update the survey.");
       const updated = result.survey;
       setSurveys((current) => [updated, ...current.filter((item) => item.id !== updated.id)]);
-      setSelected(updated.id); setDraft(updated.draft); setConfirmPublish(false);
+      setSelected(updated.id); setDraft(updated.draft); setConfirmPublish(false); setConfirmReset(false);
       if (action !== "save") setQuestionLanguages({});
-      setNotice(action === "publish" ? `Version ${updated.version} is published. New patient links use this version; existing responses remain unchanged.`
+      setNotice(action === "reset" ? `Version ${updated.version} restores the 15 default English questions. Hindi and Marathi defaults are prefilled drafts; existing responses remain unchanged.` : action === "publish" ? `Version ${updated.version} is published. New patient links use this version; existing responses remain unchanged.`
         : action === "clone" ? `Draft version ${updated.version} is ready to edit.` : "Draft saved. Patients continue to see the published version.");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to update the survey."); }
     finally { setPending(false); }
@@ -117,6 +118,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
             <Button variant="outline" disabled={busy || !dirty} onClick={() => void perform("save")}><Save aria-hidden className="size-4" />Save draft</Button>
             <Button disabled={busy || dirty} onClick={() => setConfirmPublish(true)}><Send aria-hidden className="size-4" />Publish version</Button>
           </>}
+          <Button variant="outline" disabled={busy} onClick={() => setConfirmReset(true)}><RotateCcw aria-hidden className="size-4" />Reset to defaults</Button>
           {pending && <Loader2 aria-label="Updating survey" className="size-4 animate-spin" />}
         </div>
       </CardContent>
@@ -212,6 +214,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
       </aside>
     </div>
 
+    <Dialog open={confirmReset} onOpenChange={(open) => !pending && setConfirmReset(open)}><DialogContent><DialogHeader><DialogTitle>Restore the default questions?</DialogTitle><DialogDescription>Confirm the original 15 English questions should become the new published version for this hospital survey. Hindi and Marathi default wording will be prefilled as unreviewed drafts. Existing drafts are archived, unsaved edits are discarded, and previous patient responses remain intact.</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirmReset(false)}>Cancel</Button><Button disabled={busy} onClick={() => void perform("reset")}>{pending ? "Restoring…" : "Confirm reset"}</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={confirmPublish} onOpenChange={(open) => !pending && setConfirmPublish(open)}><DialogContent><DialogHeader><DialogTitle>Publish version {survey.version}?</DialogTitle><DialogDescription>Confirm you have reviewed every English question. This version becomes available to new patients and its wording cannot be edited afterward. Hindi and Marathi remain drafts.</DialogDescription></DialogHeader><DialogFooter>
       <Button variant="outline" disabled={busy} onClick={() => setConfirmPublish(false)}>Cancel</Button><Button disabled={busy} onClick={() => void perform("publish")}>{pending ? "Publishing…" : "Confirm publication"}</Button>
     </DialogFooter></DialogContent></Dialog>

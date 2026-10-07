@@ -130,3 +130,26 @@ test("AI translation uses current English and protects existing drafts", async (
   expect(savedSurvey.draft.questions[0].prompts).toEqual({ en: english, hi: "क्या स्वागत कक्ष के कर्मचारियों ने आपकी मदद की?", mr: "कर्मचारी मदतशील होते का?" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
+
+
+test("an administrator restores all default questions and translations", async ({ page }) => {
+  test.skip(!password || process.env.SURVEY_MANAGEMENT_E2E !== "1", "Requires an isolated synthetic database");
+  await page.goto("/en/login");
+  await page.getByLabel("Email").fill("admin@shraddha.example");
+  await page.getByLabel("Password", { exact: true }).fill(password!);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(/\/en\/dashboard/);
+  await page.goto("/en/dashboard/questions");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm reset", exact: true }).click();
+  await expect(page.getByText(/restores the 15 default English questions/)).toBeVisible();
+  await expect(page.getByLabel("English question", { exact: true })).toHaveCount(15);
+  await expect(page.getByLabel("English question", { exact: true }).first()).toHaveValue("The staff at reception greeted me politely.");
+  await expect(page.getByLabel("English question", { exact: true }).first()).toBeDisabled();
+  await page.getByLabel("Language", { exact: true }).selectOption("hi");
+  await expect(page.getByLabel("Hindi question", { exact: true }).first()).toHaveValue("स्वागत कक्ष के कर्मचारियों ने मेरा विनम्रता से स्वागत किया।");
+  await page.getByLabel("Language", { exact: true }).selectOption("mr");
+  await expect(page.getByLabel("Marathi question", { exact: true }).first()).toHaveValue("स्वागत कक्षातील कर्मचाऱ्यांनी माझे नम्रपणे स्वागत केले.");
+});

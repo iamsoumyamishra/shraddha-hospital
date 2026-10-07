@@ -32,3 +32,8 @@ Published versions, answers and category scores are not rewritten. Per-survey
 row locks and revision hashes protect concurrent draft edits; a hospital row lock
 serializes version allocation by this workflow. Hindi/Marathi question wording
 stays `DRAFT` until full bundle review/publication. No new migration is required.
+
+Reset to defaults creates new survey/category/question IDs, retains the scoped
+scoring-policy reference and existing category weights, and retires old drafts.
+Published records and feedback are preserved. Hindi/Marathi question translations
+remain DRAFT with no review metadata. No schema change is required.

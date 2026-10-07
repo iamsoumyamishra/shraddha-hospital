@@ -123,3 +123,8 @@ E2E_BASE_URL=http://localhost:3111 pnpm test:e2e tests/e2e/localization.spec.ts
 Synthetic reviews are written only to the test database and temporary copy,
 never the working checkout. Do not deploy the fixture. Staff tests require their
 own credentials; patient tests do not verify authenticated dashboard flows.
+
+Reset to defaults on the Questions page restores the checked-in Hindi/Marathi
+question drafts alongside the original English questions in a new published
+English version. It does not approve full locale bundles or patient interface
+catalogs. See [reset behavior](question-management.md#restore-defaults).

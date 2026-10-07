@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { requireStaffContext, NotAuthenticatedError, NotAuthorisedError } from "@/lib/authorization";
 import { env } from "@/lib/env";
-import { assertCanTranslateDraft, cloneSurvey, listManagedSurveys, publishSurveyDraft, saveSurveyDraft, SurveyManagementError } from "@/modules/survey/manage-survey";
+import { assertCanTranslateDraft, cloneSurvey, listManagedSurveys, publishSurveyDraft, resetSurveyDefaults, saveSurveyDraft, SurveyManagementError } from "@/modules/survey/manage-survey";
 import { managementRequestSchema } from "@/modules/survey/management-schema";
 import { QuestionTranslationError, translateQuestion } from "@/modules/survey/translate-question";
 import { rateLimit } from "@/lib/rate-limit";
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ translation: await translateQuestion(input), locale: input.locale }, { headers: { "Cache-Control": "no-store" } });
     }
     const survey = input.action === "clone" ? await cloneSurvey(staff, input.surveyId)
+      : input.action === "reset" ? await resetSurveyDefaults(staff, input.surveyId, input.revision)
       : input.action === "save" ? await saveSurveyDraft(staff, input.surveyId, input.revision, input.draft)
       : await publishSurveyDraft(staff, input.surveyId, input.revision);
     return NextResponse.json({ survey });

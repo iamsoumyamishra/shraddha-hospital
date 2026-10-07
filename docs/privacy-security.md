@@ -39,3 +39,8 @@ Cookie-authenticated question mutations enforce the configured origin and a
 bounded JSON payload. Audit records for draft creation, saving and publication
 contain the version and actor, not patient data. Published question versions and
 historical responses cannot be edited through this interface.
+
+Question reset uses the same hospital-wide administrator scope and same-origin
+mutation checks as authoring. Its transactional audit records the administrator
+and new survey version; reset does not delete patient responses or send any
+content to external translation providers.

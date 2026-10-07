@@ -68,3 +68,13 @@ A per-instance throttle allows 30 requests per staff user per minute; 429 includ
 `Retry-After` for the local throttle. Missing/invalid provider configuration returns
 503, timeout 504, invalid provider output 502, and provider quota failure 429.
 Errors never expose the key or raw provider response.
+
+### Restore default questionnaire
+
+`POST /api/staff/surveys` accepts `{ "action": "reset", "surveyId": "<uuid>",
+"revision": "<hash>" }`. The existing administrator/origin/payload protections
+apply. It atomically publishes a new English version containing the original
+15 questions and default Hindi/Marathi drafts, archives existing drafts within
+that hospital/survey slug, and audits the administrator. It returns `{ "survey": ... }`.
+Historical questions/responses/scores stay intact. Missing default service
+categories or incompatible scoring rules return 422; stale revisions return 409.

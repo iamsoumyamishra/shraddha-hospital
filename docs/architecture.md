@@ -40,3 +40,7 @@ Optional `modules/survey/translate-question.ts` calls Gemini from the Node serve
 for administrator-requested question drafts. Only a key-availability boolean
 reaches the editor; credentials and provider calls stay server-side. Translation
 does not write to the database and patient pages use reviewed stored wording.
+
+The scoped reset in `manage-survey.ts` creates a new English version with default
+question translations as drafts, retires prior drafts and audits the reset in
+one transaction. It uses checked-in questionnaire data without running seeds.
