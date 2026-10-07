@@ -25,3 +25,24 @@ describe("reviewed paper imports",()=>{
   it("requires review, exact IDs, valid metadata and correct page count",async()=>{const {staff,survey,payload}=await fixture();for(const invalid of [{...payload,confirmed:false},{...payload,answers:payload.answers.map(a=>({...a,reviewed:false}))},{...payload,answers:payload.answers.slice(1)},{...payload,answers:[...payload.answers.slice(1),payload.answers[1]]},{...payload,answers:payload.answers.map(a=>({...a,questionId:randomUUID()}))},{...payload,servicesUsed:["invented"]},{...payload,visitType:"invented"},{...payload,pageHashes:[...payload.pageHashes,payload.pageHashes[0]]}])await expect(savePaperImport(staff,invalid)).rejects.toThrow();expect(await prisma.feedbackSubmission.count({where:{surveyVersionId:survey.id}})).toBe(0);});
   it("preserves explicit N/A as an incomplete response without an official index",async()=>{const {staff,survey,payload}=await fixture();await savePaperImport(staff,{...payload,answers:payload.answers.map(a=>({...a,rating:null}))});const row=await prisma.feedbackSubmission.findFirstOrThrow({where:{surveyVersionId:survey.id},include:{answers:true}});expect(row.status).toBe("INCOMPLETE");expect(row.patientIndex).toBeNull();expect(row.answers.every(a=>a.state==="NOT_APPLICABLE"&&a.value===null)).toBe(true);});
 });
+
+describe("SH-OMR-01 written feedback",()=>{
+  async function finalFixture(){
+    const {staff,survey}=await fixture();
+    const {createFinalForm}=await import("../../../web/src/modules/survey/create-final-form");
+    const final=await prisma.$transaction(tx=>createFinalForm(tx,{hospitalId:survey.hospitalId,slug:survey.slug},staff.staffUserId));
+    const questions=await prisma.question.findMany({where:{surveyVersionId:final.id},orderBy:{sortOrder:"asc"}});
+    const payload={surveyVersionId:final.id,templateVersion:"sh-omr-01-v1",pageHashes:[randomUUID().replaceAll("-","").repeat(2)],idempotencyKey:randomUUID(),locale:"hi",visitType:"unspecified",servicesUsed:["hospital"],respondentRole:"CAREGIVER",overallRating:5,comment:"Ignored unrelated field",confirmed:true,answers:questions.map(q=>({questionId:q.id,...(q.type==="TEXT"?{text:q.key==="feedback_comments"?"कृत्रिम अभिप्राय":q.key==="staff_dissatisfied"?"":"Synthetic nurse"}:{rating:q.type==="OVERALL"?5:3}),reviewed:true}))};
+    return {staff,final,questions,payload};
+  }
+  it("stores Unicode text and blank written fields, excludes overall/text from scoring",async()=>{
+    const {staff,final,payload}=await finalFixture();await savePaperImport(staff,payload);
+    const row=await prisma.feedbackSubmission.findFirstOrThrow({where:{surveyVersionId:final.id},include:{answers:true,categoryScores:true}});
+    expect(Number(row.patientIndex)).toBe(50);expect(row.overallRating).toBe(5);expect(row.comment).toBe("कृत्रिम अभिप्राय");expect(row.answers).toHaveLength(9);expect(row.categoryScores).toHaveLength(5);
+    expect(row.answers.filter(a=>a.textValue!==null)).toHaveLength(2);expect(row.answers.filter(a=>a.state==="SKIPPED")).toHaveLength(1);
+  });
+  it("rejects numeric answers for written fields, fabricated N/A and patient details",async()=>{
+    const {staff,payload,questions}=await finalFixture();const text=questions.find(q=>q.type==="TEXT")!,rating=questions.find(q=>q.type==="RATING")!;
+    for(const invalid of [{...payload,patientName:"Synthetic patient"},{...payload,answers:payload.answers.map(a=>a.questionId===text.id?{questionId:a.questionId,rating:5,reviewed:true}:a)},{...payload,answers:payload.answers.map(a=>a.questionId===rating.id?{...a,rating:null}:a)},{...payload,overallRating:1}])await expect(savePaperImport(staff,invalid)).rejects.toThrow();
+  });
+});

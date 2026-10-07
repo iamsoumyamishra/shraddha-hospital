@@ -1,0 +1,12 @@
+import { describe, expect, it } from "vitest";
+import { FINAL_FORM_QUESTIONS, matchesFinalForm, normalizeAnswer } from "@hospital/forms";
+import { finalRows, TEXT_REGIONS } from "../../src/modules/final-layout";
+import { findSquareMarkers, mapBetweenQuads, type Pixels } from "../../src/modules/marks";
+const questions=FINAL_FORM_QUESTIONS.map((q,i)=>({id:String(i),key:q.key,type:q.type,prompt:q.en}));
+describe("final mixed form",()=>{
+  it("maps exactly six circle rows and three isolated written regions",()=>{const rows=finalRows({id:"test",version:1,title:"test",hospital:"test",visitTypes:[],services:[],ratingLabels:[],questions});expect(rows).toHaveLength(6);expect(rows.every(row=>row.boxes.length===5)).toBe(true);expect(Object.keys(TEXT_REGIONS)).toEqual(questions.filter(q=>q.type==="TEXT").map(q=>q.key));expect(Object.values(TEXT_REGIONS).every(rect=>rect.y>1000&&rect.y+rect.height<1320)).toBe(true);});
+  it("rejects edited wording or type for fixed-layout calibration",()=>{expect(matchesFinalForm(questions)).toBe(true);expect(matchesFinalForm(questions.map((q,i)=>i? q:{...q,prompt:"Changed"}))).toBe(false);});
+  it("keeps empty written answers skipped, not N/A or zero",()=>{expect(normalizeAnswer("TEXT",{text:"  "})).toEqual({state:"SKIPPED",value:null,textValue:null});expect(normalizeAnswer("TEXT",{text:"  Nurse A  "})).toEqual({state:"ANSWERED",value:null,textValue:"Nurse A"});expect(()=>normalizeAnswer("TEXT",{rating:5,text:"name"})).toThrow();expect(()=>normalizeAnswer("RATING",{text:"5"})).toThrow();expect(()=>normalizeAnswer("OVERALL",{rating:null})).toThrow();});
+  it("maps printed square centres with perspective without assuming rectangular corner positions",()=>{const from=[{x:34,y:28},{x:1068,y:28},{x:1061,y:1386},{x:44,y:1386}],to=[{x:70,y:100},{x:800,y:30},{x:870,y:1190},{x:20,y:1250}],map=mapBetweenQuads(from,to);for(let i=0;i<4;i++){const result=map(from[i]!.x,from[i]!.y);expect(result.x).toBeCloseTo(to[i]!.x);expect(result.y).toBeCloseTo(to[i]!.y);}});
+  it("finds dark square borders with white holes and ignores solid ink",()=>{const pixels:Pixels={width:300,height:400,data:new Uint8ClampedArray(300*400*4).fill(255)};for(const [cx,cy] of [[20,20],[280,20],[280,380],[20,380]])for(let y=cy!-9;y<=cy!+9;y++)for(let x=cx!-9;x<=cx!+9;x++)if(Math.abs(x-cx!)>4||Math.abs(y-cy!)>4){const i=(y*300+x)*4;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=0;}expect(findSquareMarkers(pixels)).toEqual([{x:20,y:20},{x:280,y:20},{x:280,y:380},{x:20,y:380}]);});
+});

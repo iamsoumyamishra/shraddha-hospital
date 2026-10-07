@@ -10,6 +10,7 @@ export interface FeedbackDraft {
   privacyAck: boolean;
   visitType: string;
   servicesUsed: string[];
+  textAnswers: Record<string, string>;
   answers: Record<string, number | "na" | null>;
   overallRating: number | null;
   comment: string;
@@ -31,7 +32,7 @@ export function FeedbackDraftProvider({ children }: { children: React.ReactNode 
 export function useFeedbackDraft(versionId: string, firstVisitType: string) {
   const context = useContext(Drafts);
   const [initial] = useState<FeedbackDraft>(() => ({ languageChoice: null, step: 0, privacyAck: false, visitType: firstVisitType,
-    servicesUsed: [], answers: {}, overallRating: null, comment: "", contactConsent: false,
+    servicesUsed: [], textAnswers: {}, answers: {}, overallRating: null, comment: "", contactConsent: false,
     contact: { displayName: "", phone: "", email: "" }, error: null, submitting: false,
     acknowledgement: null, idempotencyKey: createFeedbackIdempotencyKey() }));
   if (!context) throw new Error("FeedbackDraftProvider missing");

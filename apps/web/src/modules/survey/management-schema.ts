@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const questionDraftSchema = z.object({
   key: z.string().regex(/^[a-z][a-z0-9_]{0,79}$/),
+  type: z.enum(["RATING","TEXT","OVERALL"]).default("RATING"),
+  isRequired: z.boolean().default(true),
   categoryKey: z.string().min(1).max(80),
   prompts: z.object({ en: z.string().trim().min(1).max(1000), hi: z.string().trim().max(1000), mr: z.string().trim().max(1000) }).strict(),
 }).strict();
@@ -11,12 +13,13 @@ export const surveyDraftSchema = z.object({
   description: z.string().trim().max(2000),
   questions: z.array(questionDraftSchema).min(1).max(60),
 }).strict().superRefine((value, context) => {
+  if (value.questions.filter(q=>q.type==="OVERALL").length > 1) context.addIssue({code:"custom",message:"Use at most one overall rating.",path:["questions"]});
   if (new Set(value.questions.map((question) => question.key)).size !== value.questions.length) {
     context.addIssue({ code: "custom", message: "Question identifiers must be unique.", path: ["questions"] });
   }
 });
 
-export type SurveyDraftInput = z.infer<typeof surveyDraftSchema>;
+export type SurveyDraftInput = z.input<typeof surveyDraftSchema>;
 
 export const managementRequestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("clone"), surveyId: z.string().uuid() }).strict(),

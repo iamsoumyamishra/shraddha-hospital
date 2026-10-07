@@ -1,3 +1,4 @@
+import { normalizeAnswer } from "@hospital/forms";
 import "server-only";
 import { randomUUID, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
@@ -84,17 +85,15 @@ export async function submitFeedback(
     ]);
   }
 
-  const scoredAnswers = input.answers.map((answer) => {
-    const question = questionById.get(answer.questionId);
-    if (!question) {
-      throw new SubmissionValidationError([`Unknown question ${answer.questionId}`]);
-    }
-    return {
-      questionId: answer.questionId,
-      categoryId: question.categoryId,
-      rating: answer.rating as Rating | null,
-    };
-  });
+  const normalized = new Map<string, ReturnType<typeof normalizeAnswer>>();
+  for (const answer of input.answers) {
+    const question = questionById.get(answer.questionId)!;
+    try { normalized.set(answer.questionId, normalizeAnswer(question.type, answer)); }
+    catch { throw new SubmissionValidationError(["The answer does not match the published question type."]); }
+    if(question.type==="OVERALL" && answer.rating!==input.overallRating) throw new SubmissionValidationError(["Overall rating does not match its question answer."]);
+  }
+  for(const question of survey.questions.filter(q=>q.isRequired && q.type!=="RATING")) if(!normalized.has(question.id) || normalized.get(question.id)!.state!=="ANSWERED") throw new SubmissionValidationError(["Complete the required written or overall question."]);
+  const scoredAnswers = input.answers.filter(answer=>questionById.get(answer.questionId)!.type==="RATING").map(answer=>({questionId:answer.questionId,categoryId:questionById.get(answer.questionId)!.categoryId,rating:answer.rating as Rating|null}));
 
   // Every entry in `input.answers` is a deliberate response: the schema makes
   // `rating` required-but-nullable, where null means the respondent explicitly
@@ -115,7 +114,7 @@ export async function submitFeedback(
     })),
     answers: scoredAnswers,
     requiredQuestionIds: survey.questions
-      .filter((question) => question.isRequired)
+      .filter((question) => question.isRequired && question.type === "RATING")
       .map((question) => question.id),
     answeredQuestionIds,
     rules: survey.scoringPolicy.rules,
@@ -160,7 +159,7 @@ export async function submitFeedback(
           visitType: input.visitType,
           servicesUsed: input.servicesUsed,
           overallRating: input.overallRating,
-          comment: input.comment ?? null,
+          comment: input.answers.find(a=>questionById.get(a.questionId)?.key==="feedback_comments")?.text?.trim() || (survey.questions.some(q=>q.key==="feedback_comments") ? null : input.comment ?? null),
           idempotencyKey: input.idempotencyKey,
           submittedAt: new Date(),
         },
@@ -170,8 +169,7 @@ export async function submitFeedback(
         data: input.answers.map((answer) => ({
           submissionId: created.id,
           questionId: answer.questionId,
-          state: answer.rating === null ? "NOT_APPLICABLE" : "ANSWERED",
-          value: answer.rating,
+          ...normalized.get(answer.questionId)!,
         })),
       });
 

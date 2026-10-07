@@ -20,6 +20,7 @@ This Turborepo uses pnpm workspaces:
 
 - `apps/web`: the Next.js app, Prisma schema/migrations, translations and app tests.
 - `apps/paper-feedback`: staff login, printable PDFs and reviewed photo imports.
+- `packages/forms`: shared final questionnaire and answer normalization.
 - `packages/database`: shared Prisma client (schema/migrations remain in web).
 - `packages/identity`: shared staff authentication and authorization.
 - `packages/scoring`: pure scoring functions/policy definitions and their unit tests.
@@ -115,11 +116,15 @@ pnpm dev:paper
 pnpm dev
 ```
 
-Open http://localhost:3001. Download a versioned English form, photograph every
+Open http://localhost:3001. Download the final multilingual SH-OMR-01 form (or a historical generated form), photograph every
 page, select its four printed corner crosses, inspect mark suggestions and
 review all answers before saving. Responses appear in web reports with the
 same server scoring. Response lists/details identify paper imports. Photos stay
 in browser memory; optional Tesseract OCR also runs locally and needs review.
+
+Production paper imports: https://shraddha-paper-feedback.vercel.app. It shares
+the web app's hospitaldb Neon database and staff accounts, with separate login
+sessions and Vercel deployment protection. See [deployment](docs/deployment.md).
 No paid API key is required. Printed forms and handwriting require a pilot
 before operational use. Nothing automatically submits detected ticks.
 
@@ -127,3 +132,10 @@ before operational use. Nothing automatically submits detected ticks.
 database. Integration suites run serially against the separate test database.
 `pnpm test:e2e:paper` runs browser checks; mutation checks require
 `PAPER_E2E_ISOLATED=1`, `SEED_STAFF_PASSWORD` and a seeded isolated test server.
+
+The final default is the user-supplied SH-OMR-01 sheet: five scored ratings, one
+overall rating and three written responses. The Questions editor supports written
+fields. Paper OCR drafts are processed independently and need review. Patient
+details/signatures are excluded. Install defaults for an existing hospital using
+`pnpm survey:install-final <hospital-slug>` after migrations; historical versions
+remain intact. See [paper feedback](docs/paper-feedback.md).

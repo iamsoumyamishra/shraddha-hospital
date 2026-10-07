@@ -100,3 +100,15 @@ Success is `{saved:true,replayed:boolean}`; errors use `{error:string}` with
 413 payload limit, 415 content type, 422 invalid review/content or 500 safe failure.
 Retries of the same source within the same survey return replayed=true.
 Health returns 503 if the shared database is unavailable.
+
+## Mixed answer payloads
+
+Both feedback and paper import answer objects now accept either rating (1–5|null)
+or text (maximum 2000 characters). The server checks the published question type.
+Only RATING contributes to category/index scoring. OVERALL must agree with the
+separate overallRating field. TEXT is trimmed; empty optional text becomes SKIPPED.
+The final paper templateVersion is sh-omr-01-v1, uses one page and requires exact
+SH-OMR-01 wording/type order. All nine answers need reviewed=true, including blank
+written fields. The final sheet has no N/A circles. Extra top-level fields such as
+patientName/UHID are rejected. Its comment comes from question 9, not an unrelated
+client comment field. Existing paper-v1 and legacy numeric clients remain supported.

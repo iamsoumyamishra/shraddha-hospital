@@ -14,6 +14,7 @@ export type SurveyPresentation = z.infer<typeof presentationSchema>;
 export interface PublishedQuestion {
   id: string;
   key: string;
+  type: "RATING" | "TEXT" | "OVERALL";
   categoryId: string;
   categoryKey: string;
   sortOrder: number;
@@ -139,6 +140,7 @@ export async function loadPublishedSurvey(
     return {
       id: question.id,
       key: question.key,
+      type: question.type,
       categoryId: question.categoryId,
       categoryKey: category.key,
       sortOrder: question.sortOrder,

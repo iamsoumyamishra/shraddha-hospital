@@ -25,7 +25,8 @@
     "@hospital/identity": "workspace:*",
     "@hospital/scoring": "workspace:*",
     "tesseract.js": "^7.0.0",
-    "jspdf": "^4.2.1"
+    "jspdf": "^4.2.1",
+    "@hospital/forms": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5",

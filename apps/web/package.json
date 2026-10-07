@@ -22,7 +22,8 @@
     "i18n:check": "tsx scripts/i18n/messages.ts check",
     "i18n:sync": "tsx scripts/i18n/messages.ts sync",
     "i18n:review": "tsx scripts/i18n/messages.ts review",
-    "i18n:survey": "tsx scripts/i18n/survey.ts"
+    "i18n:survey": "tsx scripts/i18n/survey.ts",
+    "survey:install-final": "tsx scripts/surveys/install-final-form.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -63,7 +64,8 @@
     "zod": "^4.6.5",
     "@hospital/scoring": "workspace:*",
     "@hospital/database": "workspace:*",
-    "@hospital/identity": "workspace:*"
+    "@hospital/identity": "workspace:*",
+    "@hospital/forms": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

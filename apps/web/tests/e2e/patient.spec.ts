@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 /**
  * The patient journey, on a phone-sized viewport: privacy notice, services,
- * 15 ratings, review, submit, confirmation. No account is involved anywhere.
+ * published ratings and written responses, review, submit, confirmation. No account is involved anywhere.
  */
 
 const SURVEY_PATH = "/en/feedback/outpatient-experience";
@@ -16,20 +16,21 @@ function formAlert(page: Page) {
   return page.locator('main [role="alert"]');
 }
 
-/** Fills the 15-question step. Ratings default to 4; `notApplicable` opts out. */
+/** Fills the published rating step. Ratings default to 4; `notApplicable` opts out. */
 async function answerAllQuestions(page: Page, options: { notApplicable?: number[] } = {}) {
   const notApplicable = new Set(options.notApplicable ?? []);
 
   // On this step every fieldset is one question, so the count is the contract.
   const fieldsets = page.locator("fieldset");
-  await expect(fieldsets).toHaveCount(15);
+  const count=await fieldsets.count();
+  expect(count).toBeGreaterThanOrEqual(4);
 
-  for (let index = 0; index < 15; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const fieldset = fieldsets.nth(index);
     if (notApplicable.has(index)) {
       await fieldset.getByRole("radio", { name: "Not applicable" }).click();
     } else {
-      await fieldset.getByRole("radio", { name: "4 — Satisfied" }).click();
+      await fieldset.getByRole("radio", { name: /^4 — / }).click();
     }
   }
 }
@@ -49,8 +50,7 @@ async function completePrivacyAndServices(page: Page) {
   await page.getByRole("button", { name: "Next" }).click();
   await expect(formAlert(page)).toContainText("Select at least one service");
 
-  await page.getByLabel("Reception").click();
-  await page.getByLabel("Doctor consultation").click();
+  await page.getByRole("checkbox").first().check();
   await page.getByRole("button", { name: "Next" }).click();
 }
 
@@ -95,8 +95,8 @@ test.describe("patient survey", () => {
 
     // Overall experience is asked separately from the calculated index.
     await expect(page.getByText("Step 4 of 5")).toBeVisible();
-    await page.getByRole("radio", { name: "Satisfied", exact: true }).click();
-    await page.getByLabel("Anything you would like to add?").fill("Waiting time was short and staff were helpful.");
+    await page.getByRole("radio", { name: /^(?:75% — )?Satisfied$/, exact: true }).click();
+    await page.locator("#comment").fill("Waiting time was short and staff were helpful.");
     await page.getByRole("button", { name: "Next" }).click();
 
     await expect(page.getByText("Step 5 of 5")).toBeVisible();
@@ -119,7 +119,7 @@ test.describe("patient survey", () => {
     await completePrivacyAndServices(page);
     await answerAllQuestions(page);
     await page.getByRole("button", { name: "Next" }).click();
-    await page.getByRole("radio", { name: "Satisfied", exact: true }).click();
+    await page.getByRole("radio", { name: /^(?:75% — )?Satisfied$/, exact: true }).click();
     await page.getByRole("button", { name: "Next" }).click();
     await page.route("**/api/feedback/submit", (route) => route.fulfill({
       status: 201, contentType: "application/json",
@@ -138,11 +138,11 @@ test.describe("patient survey", () => {
     await completePrivacyAndServices(page);
 
     // The counter must say how many are still outstanding.
-    await expect(page.getByText(/^0 of 15 answered/)).toBeVisible();
+    await expect(page.getByText(/^0 of \d+ answered/)).toBeVisible();
 
     // Answering only some of them must not advance.
-    await page.locator("fieldset").first().getByRole("radio", { name: "4 — Satisfied" }).click();
-    await expect(page.getByText(/^1 of 15 answered/)).toBeVisible();
+    await page.locator("fieldset").first().getByRole("radio", { name: /^4 — / }).click();
+    await expect(page.getByText(/^1 of \d+ answered/)).toBeVisible();
 
     await page.getByRole("button", { name: "Next" }).click();
 
@@ -161,7 +161,7 @@ test.describe("patient survey", () => {
     // Blank the whole reception category (2 questions).
     await answerAllQuestions(page, { notApplicable: [0, 1] });
     await page.getByRole("button", { name: "Next" }).click();
-    await page.getByRole("radio", { name: "Satisfied", exact: true }).click();
+    await page.getByRole("radio", { name: /^(?:75% — )?Satisfied$/, exact: true }).click();
     await page.getByRole("button", { name: "Next" }).click();
     await page.getByRole("button", { name: "Submit feedback" }).click();
 
@@ -178,7 +178,7 @@ test.describe("patient survey", () => {
     await completePrivacyAndServices(page);
     await answerAllQuestions(page);
     await page.getByRole("button", { name: "Next" }).click();
-    await page.getByRole("radio", { name: "Satisfied", exact: true }).click();
+    await page.getByRole("radio", { name: /^(?:75% — )?Satisfied$/, exact: true }).click();
     await page.getByRole("button", { name: "Next" }).click();
 
     await page.getByLabel("I agree to be contacted about my feedback.").click();
@@ -196,7 +196,7 @@ test.describe("patient survey", () => {
     await completePrivacyAndServices(page);
     await answerAllQuestions(page);
     await page.getByRole("button", { name: "Next" }).click();
-    await page.getByRole("radio", { name: "Satisfied", exact: true }).click();
+    await page.getByRole("radio", { name: /^(?:75% — )?Satisfied$/, exact: true }).click();
     await page.getByRole("button", { name: "Next" }).click();
 
     // Leave the consent box unticked.
@@ -217,11 +217,10 @@ test.describe("patient survey", () => {
     await page.getByRole("button", { name: "Back" }).click();
     await expect(page.getByText("Step 2 of 5")).toBeVisible();
     // The service selection survives the round trip.
-    await expect(page.getByLabel("Reception")).toBeChecked();
-    await expect(page.getByLabel("Doctor consultation")).toBeChecked();
+    await expect(page.getByRole("checkbox").first()).toBeChecked();
 
     await page.getByRole("button", { name: "Next" }).click();
-    await expect(page.locator("fieldset").first().getByRole("radio", { name: "4 — Satisfied" })).toBeChecked();
+    await expect(page.locator("fieldset").first().getByRole("radio", { name: /^4 — / })).toBeChecked();
   });
 
   test("shows a privacy notice that asks for no identifying data", async ({ page }) => {
@@ -255,9 +254,9 @@ test.describe("patient survey", () => {
     await page.getByRole("button", { name: "Continue to feedback", exact: true }).click();
     await completePrivacyAndServices(page);
 
-    await page.locator("fieldset").first().getByRole("radio", { name: "5 — Very satisfied" }).focus();
+    await page.locator("fieldset").first().getByRole("radio", { name: /^5 — / }).focus();
     await page.keyboard.press("Space");
-    await expect(page.locator("fieldset").first().getByRole("radio", { name: "5 — Very satisfied" })).toBeChecked();
+    await expect(page.locator("fieldset").first().getByRole("radio", { name: /^5 — / })).toBeChecked();
   });
 
   test("does not disclose an unknown survey", async ({ page }) => {

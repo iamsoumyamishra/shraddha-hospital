@@ -36,6 +36,8 @@ export interface FeedbackFormSurvey {
     categoryKey: string;
     sortOrder: number;
     prompt: string;
+    type?: "RATING" | "TEXT" | "OVERALL";
+    isRequired?: boolean;
   }>;
   ratingScale: { min: 1; max: 5; labels: string[] };
 }
@@ -49,12 +51,13 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const tUi = useTranslations("ui");
 
   const { draft, setter } = useFeedbackDraft(survey.id, survey.visitTypes[0] ?? "outpatient");
-  const { languageChoice, step, privacyAck, visitType, servicesUsed, answers, overallRating, comment, contactConsent, contact, error, submitting, acknowledgement, idempotencyKey } = draft;
+  const { languageChoice, step, privacyAck, visitType, servicesUsed, answers, textAnswers, overallRating, comment, contactConsent, contact, error, submitting, acknowledgement, idempotencyKey } = draft;
   const setLanguageChoice = setter("languageChoice");
   const setStep = setter("step");
   const setPrivacyAck = setter("privacyAck");
   const setVisitType = setter("visitType");
   const setServicesUsed = setter("servicesUsed");
+  const setTextAnswers = setter("textAnswers");
   const setAnswers = setter("answers");
   const setOverallRating = setter("overallRating");
   const setComment = setter("comment");
@@ -67,6 +70,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
   const grouped = useMemo(() => {
     const byCategory = new Map<string, typeof survey.questions>();
     for (const question of [...survey.questions].sort((a, b) => a.sortOrder - b.sortOrder)) {
+      if (question.type === "OVERALL" || question.key === "feedback_comments") continue;
       const bucket = byCategory.get(question.categoryKey) ?? [];
       bucket.push(question);
       byCategory.set(question.categoryKey, bucket);
@@ -80,6 +84,8 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
 
   const totalSteps = 5;
   const answeredCount = Object.values(answers).filter((value) => value !== null).length;
+  const overallPrompt = survey.questions.find(q=>q.type==="OVERALL")?.prompt ?? t("confirmationIndex");
+  const commentPrompt = survey.questions.find(q=>q.key==="feedback_comments")?.prompt ?? t("commentTitle");
 
   const STEP_KEYS = ["privacy", "services", "questions", "review", "contact"] as const;
 
@@ -146,7 +152,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
       setError("errors.services");
       return;
     }
-    if (step === 2 && answeredCount < survey.questions.length) {
+    if (step === 2 && survey.questions.some(q => q.isRequired !== false && ((q.type === "TEXT" && q.key !== "feedback_comments" && !(textAnswers[q.id] ?? "").trim()) || ((!q.type || q.type === "RATING") && answers[q.id] === undefined)))) {
       setError("errors.questions");
       return;
     }
@@ -197,7 +203,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
             : null,
           answers: survey.questions.map((question) => ({
             questionId: question.id,
-            rating: answers[question.id] === "na" ? null : (answers[question.id] ?? null),
+            ...(question.type === "TEXT" ? {text: question.key === "feedback_comments" ? comment : (textAnswers[question.id] ?? "")} : {rating:question.type === "OVERALL" ? overallRating : answers[question.id] === "na" ? null : (answers[question.id] ?? null)}),
           })),
         }),
       });
@@ -263,11 +269,11 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
           </p>
           {step === 2 ? (
             <p className="text-sm text-muted-foreground" aria-live="polite">
-              {answeredCount === survey.questions.length
+              {answeredCount === survey.questions.filter(q=>!q.type || q.type==="RATING").length
                 ? t("allAnswered")
                 : t("answeredCount", {
                     answered: answeredCount,
-                    total: survey.questions.length,
+                    total: survey.questions.filter(q=>!q.type || q.type==="RATING").length,
                   })}
             </p>
           ) : null}
@@ -380,7 +386,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
               </CardHeader>
               <CardContent className="space-y-6">
                 {group.questions.map((question) => (
-                  <QuestionBlock
+                  question.type === "TEXT" ? <div key={question.id} className="space-y-2"><Label htmlFor={`written-${question.id}`}>{question.prompt}</Label><Textarea id={`written-${question.id}`} maxLength={2000} rows={3} value={textAnswers[question.id] ?? ""} onChange={event=>setTextAnswers(current=>({...current,[question.id]:event.target.value}))}/></div> : <QuestionBlock
                     key={question.id}
                     id={question.id}
                     prompt={question.prompt}
@@ -400,11 +406,11 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>{t("confirmationIndex")}</CardTitle>
+              <CardTitle>{overallPrompt}</CardTitle>
             </CardHeader>
             <CardContent>
               <fieldset className="space-y-3" aria-required>
-                <legend className="sr-only">{t("confirmationIndex")}</legend>
+                <legend className="sr-only">{overallPrompt}</legend>
                 <RadioGroup
                   value={overallRating === null ? "" : String(overallRating)}
                   onValueChange={(value) => setOverallRating(Number(value))}
@@ -424,7 +430,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
           <Card>
             <CardHeader>
               <CardTitle>
-                {t("commentTitle")}{" "}
+                {commentPrompt}{" "}
                 <span className="text-sm font-normal text-muted-foreground">
                   ({t("commentOptional")})
                 </span>
@@ -432,7 +438,7 @@ export function FeedbackForm({ survey }: { survey: FeedbackFormSurvey }) {
             </CardHeader>
             <CardContent>
               <Label htmlFor="comment" className="sr-only">
-                {t("commentTitle")}
+                {commentPrompt}
               </Label>
               <Textarea
                 id="comment"

@@ -122,7 +122,7 @@ export interface ResponseDetail {
   consentGiven: boolean;
   openCase: boolean;
   categories: Array<{ key: string; score: number | null; answeredCount: number }>;
-  answers: Array<{ questionKey: string; prompt: string; rating: number | null; state: string }>;
+  answers: Array<{ questionKey: string; prompt: string; rating: number | null; text: string | null; state: string }>;
   contact: {
     displayName: string | null;
     phone: string | null;
@@ -172,6 +172,7 @@ export async function getResponseDetail(submissionId: string): Promise<ResponseD
       answers: {
         select: {
           value: true,
+          textValue: true,
           state: true,
           question: {
             select: {
@@ -224,6 +225,7 @@ export async function getResponseDetail(submissionId: string): Promise<ResponseD
       .map((answer) => ({
         questionKey: answer.question.key,
         prompt: answer.question.translations[0]?.prompt ?? answer.question.key,
+        text: answer.textValue,
         rating: answer.state === "ANSWERED" ? answer.value : null,
         state: answer.state,
       }))

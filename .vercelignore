@@ -1,0 +1,12 @@
+# Keep local configuration and generated artifacts out of CLI source uploads.
+.env*
+**/.env*
+.git
+**/node_modules
+**/.next
+**/.turbo
+**/test-results
+**/playwright-report
+**/coverage
+**/*.tsbuildinfo
+output

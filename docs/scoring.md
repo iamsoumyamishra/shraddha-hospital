@@ -31,3 +31,15 @@ Dashboard aggregates include eligible imported submissions, with response count
 and period unchanged; import timestamps determine the reporting period.
 Paper provenance is visible in response lists/details. It does not verify patient
 identity or establish an invitation response-rate denominator.
+
+## SH-OMR-01 default questionnaire
+
+Questions 1–5 score cleanliness, staff behaviour, accessibility/basic facilities,
+pharmacy/medicine timing and doctor-treatment satisfaction, with equal category
+weights. Question 6 is the standalone overall experience and is not included
+in the index. Questions 7–9 are unscored text. Printed 0/25/50/75/100 percent
+choices map to internal 1/2/3/4/5, yielding those same question scores.
+The reset creates a new policy version (four-category minimum, required answers,
+existing incomplete handling) and never changes past policies/results. Treat the
+wording as reported experience; treatment satisfaction does not measure clinical
+quality or treatment success. Paper labels have no N/A; unresolved marks need review.

@@ -39,15 +39,27 @@ confirmation, progress, stop, throttle handling and retry of unchanged questions
 Draft generation does not enable patient languages.
 
 The codebase now uses a pnpm/Turborepo workspace with `apps/web`, shared scoring
-and TypeScript configuration packages. It still deploys a single application;
+and TypeScript configuration packages. Web and paper-feedback deploy separately;
 see [ADR 0002](decisions/0002-turborepo.md).
 
-## Implemented locally: paper feedback app
+## Implemented and deployed: paper feedback app
 
 Separate staff app with shared database/identity/scoring, versioned English PDF
 forms, manual perspective alignment, conservative mark suggestions, per-answer
-review, optional local comment OCR and atomic audited imports. Production
-provisioning, existing-form calibration, automatic corner detection, robust
-handwriting recognition and reviewed multilingual printing remain future work.
+review, optional local comment OCR and atomic audited imports. Both production
+apps use the existing hospitaldb Neon resource. The final supplied form has its
+own calibration and corner suggestions; arbitrary existing forms and robust
+handwriting recognition remain future work.
 Pilot thresholds and photo quality with synthetic/consented representative forms
 before operational use.
+
+## Implemented and deployed: final mixed paper form
+
+SH-OMR-01 defaults, five scored questions plus overall and three text fields,
+per-field reviewed text persistence, square-marker suggestions, calibrated circle
+regions, printed-ink alignment checks and improved local OCR crop preparation.
+Excluded patient details/signature by user choice. Real handwriting accuracy and
+photo quality still need a representative pilot; no automatic handwritten-answer
+recognition guarantee is claimed. Production migrations were applied and the
+final questionnaire installed as version 3 on 2026-10-08, preserving historical
+versions. Hindi/Marathi defaults remain drafts pending complete journey review.

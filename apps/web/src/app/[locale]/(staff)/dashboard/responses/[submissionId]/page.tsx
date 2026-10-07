@@ -175,7 +175,7 @@ export default async function ResponseDetailPage({
                 <TableRow key={answer.questionKey}>
                   <TableCell className="text-sm">{answer.prompt}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {answer.rating === null ? (
+                    {answer.text !== null ? answer.text : answer.state === "SKIPPED" ? <span className="text-muted-foreground">Skipped</span> : answer.rating === null ? (
                       <span className="text-muted-foreground">N/A</span>
                     ) : (
                       answer.rating

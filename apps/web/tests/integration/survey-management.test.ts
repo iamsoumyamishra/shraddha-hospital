@@ -1,3 +1,4 @@
+import { FINAL_FORM_QUESTIONS } from "@hospital/forms";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -11,9 +12,7 @@ import { loadPublishedSurvey } from "@/modules/survey/load-published-survey";
 import { POLICY_V1 } from "@hospital/scoring/policy";
 import { submitFeedback } from "@/modules/feedback/submit-feedback";
 
-import { CATEGORY_DEFINITIONS, QUESTIONS } from "../../prisma/seed-data";
-import hindiDefaults from "../../translations/surveys/outpatient-experience-v1.hi.json";
-import marathiDefaults from "../../translations/surveys/outpatient-experience-v1.mr.json";
+import { CATEGORY_DEFINITIONS } from "../../prisma/seed-data";
 
 afterAll(() => prisma.$disconnect());
 
@@ -49,7 +48,7 @@ describe("staff survey management", () => {
     expect(first.version).toBe(2);
     expect((await listManagedSurveys(staff)).map((survey) => survey.id)).toContain(source.id);
     const edited = { ...first.draft, questions: [...first.draft.questions].reverse().map((question) => ({ ...question, prompts: { ...question.prompts, en: `Edited ${question.key}`, hi: "Synthetic Hindi draft" } })) };
-    edited.questions.push({ key: "new_question", categoryKey: "a", prompts: { en: "Added question", hi: "", mr: "" } });
+    edited.questions.push({ type:"RATING", isRequired:true, key: "new_question", categoryKey: "a", prompts: { en: "Added question", hi: "", mr: "" } });
     const saved = await saveSurveyDraft(staff, first.id, first.revision, edited);
     await expect(saveSurveyDraft(staff, first.id, first.revision, edited)).rejects.toThrow("another session");
     const bad = { ...saved.draft, questions: saved.draft.questions.map((question) => ({ ...question, categoryKey: "foreign" })) };
@@ -92,28 +91,31 @@ describe("staff survey management", () => {
     await expect(resetSurveyDefaults(staff, source.id, "a".repeat(64))).rejects.toThrow("another session");
     const reset = await resetSurveyDefaults(staff, source.id, current.revision);
     expect(reset.status).toBe("PUBLISHED"); expect(reset.version).toBe(3);
-    expect(reset.draft.questions).toHaveLength(15);
-    for (const question of QUESTIONS) {
-      const restored = reset.draft.questions.find((item) => item.key === question.key)!;
-      const key = `questions.${question.key}`;
-      expect(restored.prompts).toEqual({ en: question.prompt, hi: (hindiDefaults.content as Record<string, string>)[key], mr: (marathiDefaults.content as Record<string, string>)[key] });
+    expect(reset.draft.questions).toHaveLength(9);
+    for (const question of FINAL_FORM_QUESTIONS) {
+      const restored=reset.draft.questions.find(item=>item.key===question.key)!;
+      expect(restored.type).toBe(question.type);
+      expect(restored.prompts).toEqual({en:question.en,hi:question.hi,mr:question.mr});
     }
     expect((await prisma.surveyVersion.findUniqueOrThrow({ where: { id: existingDraft.id } })).status).toBe("RETIRED");
     expect((await loadPublishedSurvey(source.slug, "en", source.id)).questions).toEqual(before.questions);
     const latest = await loadPublishedSurvey(source.slug, "en");
     expect(latest.id).toBe(reset.id); expect(latest.availableLocales).toEqual(["en"]);
-    expect(latest.scoringPolicy.id).toBe(before.scoringPolicy.id);
-    expect(await prisma.questionTranslation.count({ where: { question: { surveyVersionId: reset.id }, locale: { in: ["hi", "mr"] }, status: "DRAFT", reviewedAt: null } })).toBe(30);
+    expect(latest.scoringPolicy.id).not.toBe(before.scoringPolicy.id);
+    const mixed=await submitFeedback({surveySlug:latest.slug,surveyVersionId:latest.id,locale:"en",idempotencyKey:randomUUID(),visitType:"unspecified",servicesUsed:["hospital"],overallRating:5,answers:latest.questions.map(q=>({questionId:q.id,...(q.type==="TEXT"?{text:q.key==="staff_dissatisfied"?"":"Synthetic written response"}:{rating:q.type==="OVERALL"?5:4})}))});
+    const mixedRow=await prisma.feedbackSubmission.findUniqueOrThrow({where:{publicId:mixed.acknowledgement.publicId},include:{answers:true}});
+    expect(mixedRow.patientIndex?.toNumber()).toBe(75);expect(mixedRow.overallRating).toBe(5);expect(mixedRow.answers.filter(a=>a.textValue!==null)).toHaveLength(2);
+    expect(await prisma.questionTranslation.count({ where: { question: { surveyVersionId: reset.id }, locale: { in: ["hi", "mr"] }, status: "DRAFT", reviewedAt: null } })).toBe(18);
     expect(await prisma.auditLog.count({ where: { entityId: reset.id, actorStaffId: staff.staffUserId, action: "RESET_SURVEY_DEFAULTS" } })).toBe(1);
     expect((await prisma.feedbackSubmission.findUniqueOrThrow({ where: { publicId: response.acknowledgement.publicId } })).patientIndex?.toNumber()).toBe(75);
   });
 
-  it("rejects unsupported categories without retiring drafts or creating a version", async () => {
-    const { staff, source } = await fixture();
-    const draft = await cloneSurvey(staff, source.id);
-    await expect(resetSurveyDefaults(staff, draft.id, draft.revision)).rejects.toThrow("original nine service categories");
-    expect((await prisma.surveyVersion.findUniqueOrThrow({ where: { id: draft.id } })).status).toBe("DRAFT");
-    expect(await prisma.surveyVersion.count({ where: { hospitalId: source.hospitalId } })).toBe(2);
+  it("installs defaults in a scope with different legacy categories", async()=>{
+    const {staff,source}=await fixture();const draft=await cloneSurvey(staff,source.id);
+    const reset=await resetSurveyDefaults(staff,draft.id,draft.revision);
+    expect(reset.draft.questions).toHaveLength(9);
+    expect(reset.categories).toHaveLength(5);
+    expect((await prisma.surveyVersion.findUniqueOrThrow({where:{id:draft.id}})).status).toBe("RETIRED");
   });
 
   it("denies other hospitals and non-admin or branch-scoped roles", async () => {

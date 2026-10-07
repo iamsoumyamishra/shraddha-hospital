@@ -48,3 +48,14 @@ Foreign keys preserve reviewer attribution; existing survey history is unchanged
 Photos are not stored. Imports create ordinary answers/category scores and an
 audit event in one transaction. Branch/department remain null in this first
 hospital-wide implementation. submittedAt is the import time, not the visit time.
+
+## Written feedback answers
+
+Two additive migrations (20261008100000_mixed_question_types and
+20261008100100_text_answers) add TEXT/OVERALL question types, SKIPPED answer state
+and nullable Answer.textValue. Enum changes commit before constraints use them.
+The answer check distinguishes a numeric 1–5 value, nonempty text of at most 2000
+characters, and null skipped/not-applicable states. A trigger rejects written values
+for rating questions, numeric values for text questions and N/A for overall.
+The reset/installer publishes new questions/policy versions; historical data is
+not rewritten. No patient-detail or signature storage was added.

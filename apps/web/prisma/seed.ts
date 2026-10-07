@@ -1,3 +1,5 @@
+import { createFinalForm } from "../src/modules/survey/create-final-form";
+import { FINAL_FORM_ID } from "@hospital/forms";
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
@@ -304,6 +306,13 @@ async function main(): Promise<void> {
     await seedSubmissions();
   }
 
+  // Seed historical synthetic v1 above, then install final defaults without rewriting it.
+  if(!await prisma.surveyVersion.findFirst({where:{hospitalId:hospital.id,patientPresentation:{path:["formId"],equals:FINAL_FORM_ID}}})) {
+    await prisma.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT id FROM hospitals WHERE id = ${hospital.id}::uuid FOR UPDATE`;
+      await createFinalForm(tx,{hospitalId:hospital.id,slug:SURVEY.slug});
+    },{timeout:20000});
+  }
   console.log("Seed complete.");
   console.log(`  survey: /en/feedback/${SURVEY.slug}`);
   console.log(

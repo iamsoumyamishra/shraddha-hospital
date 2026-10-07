@@ -61,3 +61,13 @@ proof of a patient visit or invitation. Hospital-wide admins alone may import;
 branch/department-scoped users are denied. Separate app cookie prefixes prevent
 localhost sessions from overwriting one another. Staff self-registration is
 disabled in both apps; provision accounts using controlled operator workflows.
+
+## Final form data minimization
+
+The user explicitly selected feedback answers only. Patient name, UHID, registration
+number, written date and signature are excluded from extraction and persistence.
+Only the three feedback writing regions reach the local OCR worker; API schemas
+reject additional patient-detail fields. Staff names in questions 7/8 and comments
+remain ordinary sensitive feedback under existing staff scope/retention rules.
+Raw photo previews can include patient details but remain in volatile browser memory.
+Reporting timestamps are import timestamps; visit type is unspecified, not inferred.

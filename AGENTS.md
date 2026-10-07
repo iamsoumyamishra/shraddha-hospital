@@ -102,6 +102,7 @@ apps/paper-feedback/ # separate staff-only paper import app, port 3001
 packages/
   database/        # shared Prisma client; canonical schema remains apps/web/prisma
   identity/        # staff auth, membership resolution and permission rules
+  forms/           # final SH-OMR-01 wording and pure answer normalization
   scoring/         # pure TypeScript scoring/policy and unit tests
   typescript-config/
 docs/
@@ -118,7 +119,7 @@ Run root `pnpm install`, `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`,
 `pnpm test:unit`, `pnpm test:integration` and `pnpm build`. Root DB/i18n/test:e2e
 commands forward to the web app; file arguments are relative to `apps/web`.
 Copy `.env.example` to `apps/web/.env`. Builds apply migrations and are uncached.
-Use shared workspace imports for database, identity and scoring. The database main export is server-only; its /cli entry is only for trusted Node operator scripts. Copy apps/paper-feedback/.env.example to apps/paper-feedback/.env using the same database, its own auth origin and a strong secret. Run pnpm dev:paper and pnpm test:e2e:paper for that app.
+Use shared workspace imports for database, identity, scoring and forms. SH-OMR-01 has five scored ratings, one unscored overall and three unscored text fields. Patient identifiers/signatures are excluded from paper extraction/storage by user choice. Default resets create new versions; see docs/paper-feedback.md. The database main export is server-only; its /cli entry is only for trusted Node operator scripts. Copy apps/paper-feedback/.env.example to apps/paper-feedback/.env using the same database, its own auth origin and a strong secret. Run pnpm dev:paper and pnpm test:e2e:paper for that app.
 See docs/decisions/0002-turborepo.md and docs/deployment.md.
 
 Keep server-only database/auth code out of client bundles. Components render UI; modules implement domain rules. Avoid duplicated formulas or permission checks.

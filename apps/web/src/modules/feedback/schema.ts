@@ -9,7 +9,8 @@ export const MAX_COMMENT_LENGTH = 2000;
 export const answerInputSchema = z.object({
   questionId: z.string().uuid(),
   /** null means the respondent explicitly chose "Not applicable". */
-  rating: z.number().int().min(1).max(5).nullable(),
+  rating: z.number().int().min(1).max(5).nullable().optional(),
+  text: z.string().max(2000).optional(),
 });
 
 export const contactInputSchema = z.object({

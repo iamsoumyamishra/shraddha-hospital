@@ -30,7 +30,8 @@
     "dev:web": "pnpm --filter @hospital/web dev",
     "dev:paper": "pnpm --filter @hospital/paper-feedback dev",
     "build:paper": "turbo run build --filter=@hospital/paper-feedback",
-    "test:e2e:paper": "pnpm --filter @hospital/paper-feedback test:e2e"
+    "test:e2e:paper": "pnpm --filter @hospital/paper-feedback test:e2e",
+    "survey:install-final": "pnpm --filter @hospital/web survey:install-final"
   },
   "devDependencies": {
     "turbo": "^2.8.19"

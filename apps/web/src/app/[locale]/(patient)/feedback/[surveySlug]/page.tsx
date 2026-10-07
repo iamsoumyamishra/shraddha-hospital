@@ -47,6 +47,8 @@ export default async function FeedbackSurveyPage({
           questions: survey.questions.map((question) => ({
             id: question.id,
             key: question.key,
+            type: question.type,
+            isRequired: question.isRequired,
             categoryKey: question.categoryKey,
             sortOrder: question.sortOrder,
             prompt: question.prompt,

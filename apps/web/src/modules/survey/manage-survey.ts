@@ -1,8 +1,6 @@
 import "server-only";
-import { CATEGORY_DEFINITIONS, QUESTIONS, SERVICES_USED, SURVEY } from "../../../prisma/seed-data";
-import hindiDefaults from "../../../translations/surveys/outpatient-experience-v1.hi.json";
-import marathiDefaults from "../../../translations/surveys/outpatient-experience-v1.mr.json";
-import { createHash, randomUUID } from "node:crypto";
+import { createFinalForm } from "./create-final-form";
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { NotAuthorisedError, type StaffContext } from "@/lib/authorization";
 import type { Prisma } from "@hospital/database/client";
@@ -32,6 +30,8 @@ function serialize(survey: SurveyRecord) {
   const presentation = presentationSchema.parse(survey.patientPresentation);
   const questions = survey.questions.map((question) => ({
     key: question.key,
+    type: question.type,
+    isRequired: question.isRequired,
     categoryKey: survey.categories.find((category) => category.id === question.categoryId)!.key,
     prompts: { en: question.translations.find((translation) => translation.locale === "en")?.prompt ?? "",
       hi: question.translations.find((translation) => translation.locale === "hi")?.prompt ?? "",
@@ -42,7 +42,7 @@ function serialize(survey: SurveyRecord) {
     publishedAt: survey.publishedAt?.toISOString() ?? null,
     revision: createHash("sha256").update(JSON.stringify({ draft, status: survey.status })).digest("hex"),
     categories: survey.categories.map((category) => ({ key: category.key, label: presentation.categoryLabels[category.key] ?? category.key })),
-    editable: survey.questions.every((question) => question.isRequired && question.appliesWhen === null), draft };
+    editable: survey.questions.every((question) => question.appliesWhen === null), draft };
 }
 
 export type ManagedSurvey = ReturnType<typeof serialize>;
@@ -58,7 +58,7 @@ export async function assertCanTranslateDraft(staff: StaffContext, id: string): 
     select: { status: true, questions: { select: { isRequired: true, appliesWhen: true } } } });
   if (!survey) throw new NotAuthorisedError();
   if (survey.status !== "DRAFT") throw new SurveyManagementError("Create an editable draft before translating questions.", 409);
-  if (survey.questions.some((question) => !question.isRequired || question.appliesWhen !== null)) throw new SurveyManagementError("This editor supports required, unconditional rating questions only.");
+  if (survey.questions.some((question) => question.appliesWhen !== null)) throw new SurveyManagementError("This editor supports unconditional rating, overall and text questions.");
 }
 
 async function lockSurvey(tx: Prisma.TransactionClient, staff: StaffContext, id: string) {
@@ -78,7 +78,7 @@ async function audit(tx: Prisma.TransactionClient, staff: StaffContext, survey: 
 export async function cloneSurvey(staff: StaffContext, id: string): Promise<ManagedSurvey> {
   return prisma.$transaction(async (tx) => {
     const source = await lockSurvey(tx, staff, id);
-    if (!serialize(source).editable) throw new SurveyManagementError("This editor supports required, unconditional rating questions only.");
+    if (!serialize(source).editable) throw new SurveyManagementError("This editor supports unconditional rating, overall and text questions.");
     // One editable draft per questionnaire. Locking the hospital also serializes
     // version allocation when two admins clone different versions concurrently.
     await tx.$queryRaw`SELECT id FROM hospitals WHERE id = ${source.hospitalId}::uuid FOR UPDATE`;
@@ -91,7 +91,7 @@ export async function cloneSurvey(staff: StaffContext, id: string): Promise<Mana
     for (const category of source.categories) {
       const copy = await tx.category.create({ data: { surveyVersionId: created.id, key: category.key, weight: category.weight, isCore: category.isCore, sortOrder: category.sortOrder } });
       for (const question of source.questions.filter((item) => item.categoryId === category.id)) {
-        await tx.question.create({ data: { surveyVersionId: created.id, categoryId: copy.id, key: question.key, sortOrder: question.sortOrder,
+        await tx.question.create({ data: { surveyVersionId: created.id, categoryId: copy.id, key: question.key, type: question.type, isRequired: question.isRequired, sortOrder: question.sortOrder,
           translations: { create: question.translations.filter((translation) => ["en", "hi", "mr"].includes(translation.locale)).map((translation) => ({ locale: translation.locale, prompt: translation.prompt, helpText: translation.helpText, status: "DRAFT" })) } } });
       }
     }
@@ -103,7 +103,7 @@ export async function cloneSurvey(staff: StaffContext, id: string): Promise<Mana
 function assertDraft(survey: SurveyRecord, revision: string) {
   if (survey.status !== "DRAFT") throw new SurveyManagementError("Published and retired surveys cannot be edited. Create a new draft.", 409);
   if (serialize(survey).revision !== revision) throw new SurveyManagementError("This draft changed in another session. Reload before saving.", 409);
-  if (!serialize(survey).editable) throw new SurveyManagementError("This editor supports required, unconditional rating questions only.");
+  if (!serialize(survey).editable) throw new SurveyManagementError("This editor supports unconditional rating, overall and text questions.");
 }
 
 export async function saveSurveyDraft(staff: StaffContext, id: string, revision: string, input: SurveyDraftInput): Promise<ManagedSurvey> {
@@ -119,8 +119,8 @@ export async function saveSurveyDraft(staff: StaffContext, id: string, revision:
     await tx.question.deleteMany({ where: { surveyVersionId: id, key: { notIn: draft.questions.map((question) => question.key) } } });
     for (const [sortOrder, question] of draft.questions.entries()) {
       const row = await tx.question.upsert({ where: { surveyVersionId_key: { surveyVersionId: id, key: question.key } },
-        create: { surveyVersionId: id, key: question.key, categoryId: categories.get(question.categoryKey)!, sortOrder },
-        update: { categoryId: categories.get(question.categoryKey)!, sortOrder } });
+        create: { surveyVersionId: id, key: question.key, type: question.type, isRequired: question.isRequired, categoryId: categories.get(question.categoryKey)!, sortOrder },
+        update: { type: question.type, isRequired: question.isRequired, categoryId: categories.get(question.categoryKey)!, sortOrder } });
       for (const locale of ["en", "hi", "mr"] as const) {
         await tx.questionTranslation.upsert({ where: { questionId_locale: { questionId: row.id, locale } },
           create: { questionId: row.id, locale, prompt: question.prompts[locale], status: "DRAFT" },
@@ -141,7 +141,7 @@ export async function publishSurveyDraft(staff: StaffContext, id: string, revisi
     surveyDraftSchema.parse(serialize(survey).draft);
     const rules = scoringPolicyRulesSchema.parse(survey.scoringPolicyVersion.rules);
     if (survey.scoringPolicyVersion.hospitalId !== survey.hospitalId) throw new SurveyManagementError("The scoring policy belongs to another hospital.");
-    if (new Set(survey.questions.map((question) => question.categoryId)).size < rules.completion.minScoredCategories) {
+    if (new Set(survey.questions.filter(q=>q.type==="RATING").map((question) => question.categoryId)).size < rules.completion.minScoredCategories) {
       throw new SurveyManagementError(`Keep questions in at least ${rules.completion.minScoredCategories} categories so patients can complete this survey.`);
     }
     if (survey.categories.some((category) => !Number.isFinite(Number(category.weight)) || Number(category.weight) <= 0)) throw new SurveyManagementError("Category weights must be positive.");
@@ -160,36 +160,8 @@ export async function resetSurveyDefaults(staff: StaffContext, id: string, revis
   return prisma.$transaction(async (tx) => {
     const source = await lockSurvey(tx, staff, id);
     if (serialize(source).revision !== revision) throw new SurveyManagementError("This survey changed in another session. Reload before resetting.", 409);
-    const categoryByKey = new Map(source.categories.map((category) => [category.key, category]));
-    if (CATEGORY_DEFINITIONS.some((category) => !categoryByKey.has(category.key))) throw new SurveyManagementError("Default questions require the original nine service categories.");
-    const rules = scoringPolicyRulesSchema.parse(source.scoringPolicyVersion.rules);
-    if (source.scoringPolicyVersion.hospitalId !== source.hospitalId || rules.completion.minScoredCategories > CATEGORY_DEFINITIONS.length) throw new SurveyManagementError("The current scoring policy cannot publish the default questionnaire.");
-    if (CATEGORY_DEFINITIONS.some((category) => { const weight = Number(categoryByKey.get(category.key)!.weight); return !Number.isFinite(weight) || weight <= 0; })) throw new SurveyManagementError("Category weights must be positive.");
     await tx.$queryRaw`SELECT id FROM hospitals WHERE id = ${source.hospitalId}::uuid FOR UPDATE`;
-    const latest = await tx.surveyVersion.aggregate({ where: { hospitalId: source.hospitalId, slug: source.slug }, _max: { version: true } });
-    // Retain superseded drafts rather than deleting their questions or translations.
-    await tx.surveyVersion.updateMany({ where: { hospitalId: source.hospitalId, slug: source.slug, status: "DRAFT" }, data: { status: "RETIRED" } });
-    const created = await tx.surveyVersion.create({ data: { hospitalId: source.hospitalId, slug: source.slug, version: (latest._max.version ?? 0) + 1,
-      title: SURVEY.title, description: SURVEY.description, visitTypes: [...SURVEY.visitTypes],
-      patientPresentation: { services: SERVICES_USED.map((service) => ({ ...service })), categoryLabels: Object.fromEntries(CATEGORY_DEFINITIONS.map((category) => [category.key, category.label])) },
-      scoringPolicyVersionId: source.scoringPolicyVersionId, status: "PUBLISHED", publishedAt: new Date() } });
-    const categories = CATEGORY_DEFINITIONS.map((category) => ({ id: randomUUID(), surveyVersionId: created.id, key: category.key,
-      weight: categoryByKey.get(category.key)!.weight, isCore: categoryByKey.get(category.key)!.isCore, sortOrder: category.sortOrder }));
-    const questions = QUESTIONS.map((question) => ({ id: randomUUID(), surveyVersionId: created.id,
-      categoryId: categories.find((category) => category.key === question.categoryKey)!.id, key: question.key, sortOrder: question.sortOrder }));
-    const translations = QUESTIONS.flatMap((question, index) => {
-      const key = `questions.${question.key}`;
-      const hi = (hindiDefaults.content as Record<string, string>)[key];
-      const mr = (marathiDefaults.content as Record<string, string>)[key];
-      if (!hi || !mr) throw new SurveyManagementError("A default question translation is missing.");
-      return [ { questionId: questions[index]!.id, locale: "en", prompt: question.prompt, status: "PUBLISHED" as const, reviewedAt: new Date(), reviewedById: staff.staffUserId },
-        { questionId: questions[index]!.id, locale: "hi", prompt: hi, status: "DRAFT" as const },
-        { questionId: questions[index]!.id, locale: "mr", prompt: mr, status: "DRAFT" as const } ];
-    });
-    await tx.category.createMany({ data: categories });
-    await tx.question.createMany({ data: questions });
-    await tx.questionTranslation.createMany({ data: translations });
-    await audit(tx, staff, created, "RESET_SURVEY_DEFAULTS");
+    const created = await createFinalForm(tx, {hospitalId:source.hospitalId,slug:source.slug}, staff.staffUserId);
     return serialize(await tx.surveyVersion.findUniqueOrThrow({ where: { id: created.id }, include }));
   }, { timeout: 20000 });
 }

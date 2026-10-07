@@ -29,8 +29,11 @@ function answerPayload(questionIds: string[], rating: number | null = 4) {
  * a test only has to state what it is actually exercising; `servicesUsed` and
  * `overallRating` are mandatory and each has a dedicated rejection test below.
  */
+let legacyVersionId: string;
+
 function requiredFields() {
   return {
+    surveyVersionId: legacyVersionId,
     servicesUsed: ["reception", "consultation"],
     overallRating: 4,
   };
@@ -39,6 +42,7 @@ function requiredFields() {
 describe("submitFeedback", () => {
   beforeAll(async () => {
     await seedSurveyFixture();
+    legacyVersionId=(await prisma.surveyVersion.findFirstOrThrow({where:{slug:PUBLIC_SURVEY_SLUG,version:1,hospital:{slug:"shraddha-hospital"}}})).id;
   });
 
   afterAll(async () => {
@@ -46,7 +50,7 @@ describe("submitFeedback", () => {
   });
 
   it("stores a submission with a server-computed index and one row per category", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
     const idempotencyKey = randomUUID();
 
@@ -90,7 +94,7 @@ describe("submitFeedback", () => {
   });
 
   it("is idempotent: a retried submit returns the original acknowledgement", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
     const idempotencyKey = randomUUID();
     const body = {
@@ -115,7 +119,7 @@ describe("submitFeedback", () => {
   });
 
   it("concurrent submits with one key create exactly one submission", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
     const idempotencyKey = randomUUID();
     const body = {
@@ -140,7 +144,7 @@ describe("submitFeedback", () => {
   });
 
   it("rejects answers that belong to a different survey", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
 
     await expect(
       submitFeedback({
@@ -158,7 +162,7 @@ describe("submitFeedback", () => {
   });
 
   it("rejects a duplicate question in one submission", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
     const [firstQuestionId] = questionIds;
     if (firstQuestionId === undefined) throw new Error("Survey has no questions");
@@ -176,7 +180,7 @@ describe("submitFeedback", () => {
   });
 
   it("rejects a submission with no services selected", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
 
     // Every question answered, so only the missing service can be the cause.
@@ -193,7 +197,7 @@ describe("submitFeedback", () => {
   });
 
   it("rejects a submission with no overall rating", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
 
     await expect(
@@ -209,7 +213,7 @@ describe("submitFeedback", () => {
   });
 
   it("names the omitted questions when a required answer is missing", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
     const omitted = survey.questions[0];
     if (omitted === undefined) throw new Error("Survey has no questions");
@@ -226,7 +230,7 @@ describe("submitFeedback", () => {
   });
 
   it("rejects a submission that omits a required question", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
     const idempotencyKey = randomUUID();
     const omitted = questionIds[questionIds.length - 1];
@@ -250,7 +254,7 @@ describe("submitFeedback", () => {
   });
 
   it("treats an explicit not-applicable answer as answered rather than missing", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const receptionCategory = survey.categories.find((category) => category.key === "reception");
     const receptionIds = survey.questions
       .filter((question) => question.categoryId === receptionCategory?.id)
@@ -293,7 +297,7 @@ describe("submitFeedback", () => {
   });
 
   it("treats not-applicable as excluded rather than zero", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const receptionCategory = survey.categories.find(
       (category) => category.key === "reception",
     );
@@ -337,7 +341,7 @@ describe("submitFeedback", () => {
   });
 
   it("renormalises the index over answered categories only", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const billingCategory = survey.categories.find((category) => category.key === "billing_clarity");
     const excluded = survey.questions.filter(
       (question) => question.categoryId === billingCategory?.id,
@@ -363,7 +367,7 @@ describe("submitFeedback", () => {
   });
 
   it("ignores a client-supplied index", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
@@ -383,7 +387,7 @@ describe("submitFeedback", () => {
   });
 
   it("keeps contact details out of the submission row", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
@@ -411,7 +415,7 @@ describe("submitFeedback", () => {
   });
 
   it("stores no contact row when consent is withheld", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
@@ -445,7 +449,7 @@ describe("submitFeedback", () => {
   });
 
   it("rejects a rating outside the 1-5 scale", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
 
     await expect(
@@ -461,7 +465,7 @@ describe("submitFeedback", () => {
   });
 
   it("enforces one answer per submission and question at the database level", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
     const { acknowledgement } = await submitFeedback({
       ...requiredFields(),
@@ -489,7 +493,7 @@ describe("submitFeedback", () => {
   });
 
   it("stores the survey and scoring policy version for later comparison", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const questionIds = survey.questions.map((question) => question.id);
 
     const { acknowledgement } = await submitFeedback({
@@ -555,7 +559,7 @@ describe("published survey", () => {
   });
 
   it("weights categories equally rather than weighting by question count", async () => {
-    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en");
+    const survey = await loadPublishedSurvey(PUBLIC_SURVEY_SLUG, "en", legacyVersionId);
     const weights = survey.categories.map((category) => category.weight);
     expect(new Set(weights).size).toBe(1);
 

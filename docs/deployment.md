@@ -114,7 +114,12 @@ See [Vercel monorepo setup](https://vercel.com/docs/monorepos) and
 
 ## Paper app deployment
 
-The new `apps/paper-feedback` app is currently local, not provisioned in production.
+The `apps/paper-feedback` app is deployed as `shraddha-paper-feedback` at
+https://shraddha-paper-feedback.vercel.app. Its production environment connects
+to the same `hospitaldb` Neon resource as `shraddha-hospital`. Staff accounts and
+hospital memberships are shared; authentication cookies and the app secret are
+separate. Vercel deployment protection remains enabled.
+
 Deploy it as a separate Next.js project with root directory apps/paper-feedback
 and access to workspace files outside that directory. Its vercel.json supplies
 install/build commands. Configure DATABASE_URL (or the shared Neon
@@ -123,8 +128,24 @@ its own HTTPS BETTER_AUTH_URL and optional NEXT_PUBLIC_WEB_URL pointing to web.
 Use the same hospital database; TEST_DATABASE_URL must remain separate.
 No translation/OCR API secret is required. See its .env.example.
 
+For CLI uploads, link the repository root to the intended Vercel project and
+deploy from that root so shared packages are included. The root .vercelignore
+excludes local environment files, generated artifacts and the output directory;
+the calibrated form is included through the paper app public folder. Inspect
+uploads with `vercel deploy --dry --json` before deploying. Production secrets
+are supplied through Vercel and the Neon integration, never local .env uploads.
+
 Canonical migrations remain in apps/web/prisma. Both app builds deploy pending
 migrations and generate the shared client. New migration is additive and requires
 a corresponding web deployment because both now use the shared generated client.
 Never use development seed/reset commands in production.
 Local Node minimum is 22.9 (shared client generation uses --env-file-if-exists).
+
+## Installing final form defaults
+
+Apply the two mixed-question/text-answer migrations by deploying the app builds.
+Then run pnpm survey:install-final <hospital-slug> in a controlled operator
+environment or use the authorized Questions page Reset defaults action. This
+publishes a new survey/policy and preserves previous responses. No new secret
+is needed. The final paper asset must be deployed with the paper app public folder;
+standalone deployments must include that folder alongside .next/static.

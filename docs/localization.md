@@ -140,3 +140,12 @@ labels. The app's staff UI is English. The recorded original response language
 can be English, Hindi or Marathi; this does not publish translated patient surveys.
 Optional local comment OCR supports eng/hin/mar and is a draft requiring review.
 Reviewed multilingual print templates are a future extension.
+
+## Final multilingual paper
+
+The supplied SH-OMR-01 raster shows English, Hindi and Marathi wording together.
+packages/forms stores its nine question defaults. Reset/installation publishes
+English and creates Hindi/Marathi drafts; this does not bypass complete reviewed
+patient-journey gating. Written Unicode answers preserve original language/text.
+The selected response language chooses the local Tesseract eng/hin/mar model.
+OCR does not translate text and all drafts need review.

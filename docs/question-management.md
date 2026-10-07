@@ -14,9 +14,9 @@ per hospital/survey slug is maintained by this authoring workflow.
 In a draft, edit the English title/introduction and question wording, add or
 remove questions, select an existing category, and move questions up or down.
 Patient questions are grouped by service category, with order preserved within
-each group. The editor currently supports required, unconditional rating
-questions only. Each uses the existing satisfaction scale and allows not
-applicable. Category weights, service definitions, rating values, applicability
+each group. The editor supports unconditional scored ratings, an unscored
+overall rating and unscored written fields. Required flags are editable. Rating
+questions use the versioned satisfaction scale; digital ratings allow N/A. Category weights, service definitions, rating values, applicability
 and scoring policies cannot be changed here. There is a limit of 60 questions;
 prefer a shorter questionnaire for patients.
 
@@ -82,20 +82,17 @@ appear on new requests. Code/catalog changes still require a deployment.
 
 ## Restore defaults
 
-**Reset to defaults** restores the original 15 questions from `apps/web/prisma/seed-data.ts`
-with the checked-in Hindi/Marathi question wording from `apps/web/translations/surveys/`.
+**Reset to defaults** installs the final nine-question SH-OMR-01 questionnaire
+from packages/forms: five scored ratings, one overall rating and three text fields.
 An authenticated hospital-wide administrator confirms the reset. It publishes a
-new English version for only the selected hospital/survey slug, retaining the
-existing scoring policy and category weights. Previous published questionnaires,
-answers and scores remain intact; existing drafts in that scope become retired
-rather than being deleted. Unsaved editor changes are discarded after success.
-The default translations are prefilled DRAFT wording, without fabricated review
-or patient-language approval. Full translation review is still required.
+new English version for the selected hospital/survey slug with a new five-category
+policy and equal weights. Previous questionnaires, policies, answers and scores
+remain intact; existing drafts become retired. Unsaved edits are discarded.
+Hindi/Marathi defaults are DRAFT wording; full journey review is still required.
 
-The reset is atomic, requires the original nine categories and a compatible
-scoring policy, rejects stale revisions, and records `RESET_SURVEY_DEFAULTS`
+The reset is atomic, rejects stale revisions and records RESET_SURVEY_DEFAULTS
 with the acting administrator. It does not reseed accounts, demo responses or
-other hospitals. No migration or environment change is required.
+other hospitals. Mixed-question migrations must be deployed before using it.
 
 ## Verification
 
@@ -110,3 +107,13 @@ and authorization before provider calls. Their mutation test is
 opt-in (`SURVEY_MANAGEMENT_E2E=1` plus `SEED_STAFF_PASSWORD`) and must target an
 isolated application backed by synthetic test data. Anonymous redirects are
 checked without those credentials. Never run the publication test on production.
+
+## Final form and written fields
+
+Reset defaults installs the user-provided nine-question SH-OMR-01 questionnaire
+with a new immutable scoring policy. The editor now supports scored rating,
+unscored overall and unscored written questions, plus required/optional flags.
+Cloning preserves types and optionality. At most one overall question can publish;
+only rating categories count toward completion feasibility. Changing the fixed
+paper's wording or types requires new paper calibration; the final reader only
+recognizes exact SH-OMR-01 defaults. See [paper workflow](paper-feedback.md).

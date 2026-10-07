@@ -60,3 +60,13 @@ canonical migrations. Tests live with their apps; integration suites run seriall
 against a separate test database. There is no separate API service.
 See [ADR 0002](decisions/0002-turborepo.md) for the original migration and
 [ADR 0003](decisions/0003-paper-feedback-app.md) for the second app.
+
+## Mixed questionnaire and final paper layout
+
+packages/forms owns the user-approved SH-OMR-01 wording, type definitions and pure
+answer normalization. Both apps transpile it. RATING questions alone contribute
+to scoring; OVERALL and TEXT are persisted without category contributions.
+The paper app references the supplied blank raster, detects square marker candidates,
+projects arbitrary marker quadrilaterals and checks printed-circle agreement.
+Per-field local OCR drafts and explicit review precede trusted server normalization.
+See [paper workflow](paper-feedback.md).

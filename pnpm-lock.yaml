@@ -17,6 +17,9 @@ importers:
       '@hospital/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@hospital/forms':
+        specifier: workspace:*
+        version: link:../../packages/forms
       '@hospital/identity':
         specifier: workspace:*
         version: link:../../packages/identity
@@ -93,6 +96,9 @@ importers:
       '@hospital/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@hospital/forms':
+        specifier: workspace:*
+        version: link:../../packages/forms
       '@hospital/identity':
         specifier: workspace:*
         version: link:../../packages/identity
@@ -275,6 +281,8 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/forms: {}
 
   packages/identity:
     dependencies:
