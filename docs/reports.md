@@ -57,3 +57,7 @@ E2E_BASE_URL=http://localhost:3100 pnpm test:e2e tests/e2e/report.spec.ts --proj
 This disables the application server fixture; the renderer tests require no staff
 password or database. Button integration coverage is in the credential-gated
 staff browser suite.
+
+PDF font preparation excludes Next.js local fallback font faces, which can be
+unavailable on the device, while loading the application's downloadable fonts.
+This preserves Latin/Devanagari rendering without requiring local Arial.

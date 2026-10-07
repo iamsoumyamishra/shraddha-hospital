@@ -13,7 +13,7 @@ services:
       - "55432:5432"
     volumes:
       - shraddha_pgdata:/var/lib/postgresql/data
-      - ./scripts/create-test-db.sql:/docker-entrypoint-initdb.d/00-create-test-db.sql:ro
+      - ./apps/web/scripts/create-test-db.sql:/docker-entrypoint-initdb.d/00-create-test-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U shraddha -d shraddha"]
       interval: 5s

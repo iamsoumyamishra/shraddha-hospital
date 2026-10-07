@@ -82,8 +82,8 @@ appear on new requests. Code/catalog changes still require a deployment.
 
 ## Restore defaults
 
-**Reset to defaults** restores the original 15 questions from `prisma/seed-data.ts`
-with the checked-in Hindi/Marathi question wording from `translations/surveys/`.
+**Reset to defaults** restores the original 15 questions from `apps/web/prisma/seed-data.ts`
+with the checked-in Hindi/Marathi question wording from `apps/web/translations/surveys/`.
 An authenticated hospital-wide administrator confirms the reset. It publishes a
 new English version for only the selected hospital/survey slug, retaining the
 existing scoring policy and category weights. Previous published questionnaires,
@@ -101,7 +101,7 @@ other hospitals. No migration or environment change is required.
 
 Integration tests cover draft concurrency, tenant/role isolation, stale revisions,
 publication eligibility, preservation of historical scores, and export of saved
-translation drafts. Desktop/mobile tests in `tests/e2e/questions.spec.ts` cover
+translation drafts. Desktop/mobile tests in `apps/web/tests/e2e/questions.spec.ts` cover
 the authenticated authoring and patient-rendering flow, plus mocked AI dropdown
 selection, English source preservation, replacement confirmation, loading locks,
 error preservation and mobile overflow. Provider unit tests cover malformed output,

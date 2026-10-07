@@ -1,3 +1,7 @@
+> Historical snapshot from 2026-10-04, before the Turborepo migration. Paths and
+> feature status below reflect that commit. See README.md and docs/architecture.md
+> for the current workspace and setup.
+
 # STATUS
 
 Snapshot of the Shraddha Hospital patient-experience platform: what is built and

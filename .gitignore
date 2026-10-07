@@ -1,5 +1,5 @@
 # dependencies
-/node_modules
+node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -9,23 +9,23 @@
 !.yarn/versions
 
 # testing
-/coverage
-/test-results
-/playwright-report
-/blob-report
+coverage
+test-results
+playwright-report
+blob-report
 
 # generated prisma client
-/src/generated
+**/src/generated
 
 # graphify tool cache (regenerable; the report and graph itself are tracked)
 /graphify-out/cache/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build
 
 # misc
 .DS_Store
@@ -47,3 +47,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Turborepo task cache
+.turbo/

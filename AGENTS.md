@@ -80,64 +80,43 @@ Use Node runtime for database/auth routes unless the selected dependencies expli
 | Staff identity | Better Auth; explicit application authorization |
 | Dashboard charts | Recharts with accessible text/table alternatives |
 | Tests | Vitest for logic, Playwright for important end-to-end flows |
-| Package manager | pnpm with committed lockfile |
-| Deployment | Docker application and managed PostgreSQL |
+| Package manager | pnpm 11.7.0 workspaces with committed lockfile; Turborepo |
+| Deployment | Next.js standalone/Vercel; managed PostgreSQL; Docker Compose for local databases |
 | Optional later jobs | Redis and BullMQ |
 | Feedback translations | Reviewed catalogs and survey bundles; optional staff-only Gemini question drafts, see docs/localization.md |
 
 Use compatible stable dependency versions and consult current official documentation when implementing integrations. Do not mix APIs from incompatible Prisma, Next.js, or authentication versions. Do not add microservices, vector databases, WebSockets, or AI scoring for the MVP.
 
-## 6. Suggested repository layout
+## 6. Repository layout
 
 ```text
-src/
-  app/
-    [locale]/
-      feedback/[surveySlug]/
-      dashboard/
-    api/
-  components/
-    ui/
-    feedback/
-    dashboard/
-  modules/
-    survey/
-    feedback/
-    scoring/
-    analytics/
-    identity/
-    cases/
-  lib/
-    db.ts
-    auth.ts
-    authorization.ts
-    env.ts
-  i18n/
-messages/
-  en.json
-  hi.json
-  mr.json
-prisma/
-  schema.prisma
-  migrations/
-  seed.ts
+apps/web/
+  src/             # Next.js routes, components, server modules, i18n, lib
+  prisma/          # schema, migrations and seed
+  messages/        # interface catalogs and review metadata
+  translations/    # versioned survey bundles
+  scripts/         # localization tooling and test DB initialization
+  tests/           # app unit, integration and browser tests
+  .env             # ignored local configuration
+packages/
+  scoring/         # pure TypeScript scoring/policy and unit tests
+  typescript-config/
 docs/
-  architecture.md
-  scoring.md
-  data-model.md
-  api.md
-  localization.md
-  privacy-security.md
-  deployment.md
-  roadmap.md
   decisions/
-tests/
-  unit/
-  e2e/
+pnpm-workspace.yaml
+turbo.json
+package.json
 README.md
 AGENTS.md
 .env.example
 ```
+
+Run root `pnpm install`, `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`,
+`pnpm test:unit`, `pnpm test:integration` and `pnpm build`. Root DB/i18n/test:e2e
+commands forward to the web app; file arguments are relative to `apps/web`.
+Copy `.env.example` to `apps/web/.env`. Builds apply migrations and are uncached.
+Use workspace imports for scoring; keep database/auth code inside the web app.
+See docs/decisions/0002-turborepo.md and docs/deployment.md.
 
 Keep server-only database/auth code out of client bundles. Components render UI; modules implement domain rules. Avoid duplicated formulas or permission checks.
 

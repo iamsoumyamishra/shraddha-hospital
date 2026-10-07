@@ -37,3 +37,7 @@ drafts while preserving historical responses and scoring.
 Implemented: Translate all questions with Hindi/Marathi choices, replacement
 confirmation, progress, stop, throttle handling and retry of unchanged questions.
 Draft generation does not enable patient languages.
+
+The codebase now uses a pnpm/Turborepo workspace with `apps/web`, shared scoring
+and TypeScript configuration packages. It still deploys a single application;
+see [ADR 0002](decisions/0002-turborepo.md).

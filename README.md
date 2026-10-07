@@ -14,9 +14,24 @@ Hospital administrators manage versioned survey questions in the dashboard's
 generates the Prisma client, then builds Next.js. The build environment needs
 database connectivity and migration permissions. See [deployment](docs/deployment.md).
 
+## Workspace
+
+This Turborepo uses pnpm workspaces:
+
+- `apps/web`: the Next.js app, Prisma schema/migrations, translations and app tests.
+- `packages/scoring`: pure scoring functions/policy definitions and their unit tests.
+- `packages/typescript-config`: shared strict TypeScript defaults.
+
+Run commands from the repository root. Turbo coordinates app/package checks;
+root database and localization commands forward to `@hospital/web`. For example,
+`pnpm --filter @hospital/scoring test:unit` runs only scoring tests. Build and
+integration tasks always execute, so database migrations cannot be skipped by cache.
+See the [architecture decision](docs/decisions/0002-turborepo.md).
+
 ## Local setup
 
-Use pnpm with the committed lockfile. Copy `.env.example` to `.env` and configure
+Use Node.js 22 or newer and pnpm 11.7.0 with the committed lockfile. Copy
+`.env.example` to `apps/web/.env` and configure
 the database, authentication secret and local application origins.
 
 ```bash
@@ -38,7 +53,7 @@ require valid test-account credentials.
 
 ## Hospital branding
 
-Set the optional display name in `.env`:
+Set the optional display name in `apps/web/.env`:
 
 ```dotenv
 HOSPITAL_NAME="Your Hospital"
@@ -49,8 +64,8 @@ If the variable is missing, empty, or whitespace-only, the application displays
 staff login/sidebar, page titles, and not-found page. Restart the application
 after changing it; rebuild production artifacts to refresh static metadata.
 
-The original geometric H logo is stored in `src/app/icon.svg` and reused by
-`src/components/branding/brand-mark.tsx`, including the browser tab icon.
+The original geometric H logo is stored in `apps/web/src/app/icon.svg` and reused by
+`apps/web/src/components/branding/brand-mark.tsx`, including the browser tab icon.
 Branding applies to this deployment; it does not select a hospital's data or
 change staff permissions. See [deployment notes](docs/deployment.md).
 

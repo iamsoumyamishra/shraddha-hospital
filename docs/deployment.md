@@ -20,7 +20,7 @@ reset the database. Published survey translations still require human review.
 ## Display branding
 
 `HOSPITAL_NAME` is optional, server-side display configuration. Set it in the
-application's environment (or `.env` for local development). Leading/trailing
+application's environment (or `apps/web/.env` for local development). Leading/trailing
 whitespace is trimmed; missing, empty, and whitespace-only values use
 `Hospital Name`.
 
@@ -30,7 +30,7 @@ Page titles and the not-found page use the same resolver. Restart the process
 after environment changes and rebuild production artifacts to refresh statically
 rendered metadata. No `NEXT_PUBLIC_` variable is required.
 
-The vector logo is `src/app/icon.svg`. Next.js serves it as `/icon.svg`, uses it
+The vector logo is `apps/web/src/app/icon.svg`. Next.js serves it as `/icon.svg`, uses it
 as the tab icon, and all visible brand marks reference the same asset. The mark
 has no embedded hospital name, so it can be reused across deployments.
 
@@ -82,3 +82,32 @@ is needed for this feature. The retired Google Cloud Translation settings
 Only patient feedback routes offer language selection; other application routes
 are served in English. Locale availability now reviews feedback interface text
 rather than the entire employee/dashboard catalog.
+
+## Monorepo deployment
+
+Install from the repository root with `pnpm install --frozen-lockfile`, then run
+`pnpm build`. The app and migration working directory is `apps/web`. Configure
+Vercel's Root Directory as `apps/web` and enable inclusion of source files outside
+that directory, so workspace packages can be compiled. Use the Next.js framework
+preset, install command `pnpm install --frozen-lockfile` and build command
+`pnpm build`. Within the app directory that command runs the web build directly;
+at the repository root it runs through Turbo. Keep all existing deployment
+environment variables on the same Vercel project.
+
+Local secrets belong in `apps/web/.env`. The migrated local checkout retains a
+root `.env` symlink for compatibility; new clones only need the app file. Neither
+is committed. Root `.env.example` remains the placeholder template. Turbo uses
+strict environment filtering with explicit application-variable patterns in
+`turbo.json`; include any future process variables there. App dotenv loading
+still reads its own file. Builds, type checks and database integration tests are
+uncached; lint and unit tests may be cached.
+
+Standalone output is `apps/web/.next/standalone/apps/web/server.js`. Before
+serving that output, copy `apps/web/public` and `apps/web/.next/static` into its
+`apps/web/public` and `apps/web/.next/static` directories respectively, then run
+the server with the required production environment. The supplied Docker Compose
+file provisions only the local databases; there is no application Dockerfile or
+CI workflow in this repository.
+
+See [Vercel monorepo setup](https://vercel.com/docs/monorepos) and
+[Next.js standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output).

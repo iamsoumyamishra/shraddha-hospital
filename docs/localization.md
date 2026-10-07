@@ -26,8 +26,8 @@ continues to come from `HOSPITAL_NAME` in every language.
 
 ## Manual interface workflow
 
-Edit `messages/hi.json` and `messages/mr.json` manually. Approval hashes cover only
-feedback text selected by `src/i18n/feedback-messages.ts`: survey and language
+Edit `apps/web/messages/hi.json` and `apps/web/messages/mr.json` manually. Approval hashes cover only
+feedback text selected by `apps/web/src/i18n/feedback-messages.ts`: survey and language
 namespaces, patient brand labels and feedback accessibility/loading text. Legacy
 staff translations remain in those files for compatibility but are not used or
 required for feedback approval. Changing English staff/report text does not
@@ -46,8 +46,8 @@ pnpm i18n:review --locale hi --reviewer "Actual human reviewer"
 Sync preserves unchanged text, removes obsolete keys, blanks changed feedback
 wording and withdraws previous approval. It makes no external request. Run sync
 before translating; a later sync may blank text whose English source changed.
-Repeat with `mr`. Review records source/target hashes in `messages/reviews.json`
-and revision hashes in `messages/source-hashes.json`; hashes are integrity checks,
+Repeat with `mr`. Review records source/target hashes in `apps/web/messages/reviews.json`
+and revision hashes in `apps/web/messages/source-hashes.json`; hashes are integrity checks,
 not proof of linguistic accuracy. Build checks reject stale approvals. ICU
 arguments must match exactly; plural/select syntax is not supported yet.
 
@@ -102,8 +102,8 @@ without score, reference, language selector or another-response action.
 
 ## Verification
 
-`tests/e2e/patient.spec.ts` covers language selection before privacy and the
-English journey on desktop/mobile. `tests/e2e/localization.spec.ts` verifies
+`apps/web/tests/e2e/patient.spec.ts` covers language selection before privacy and the
+English journey on desktop/mobile. `apps/web/tests/e2e/localization.spec.ts` verifies
 English/Hindi/Marathi switching, retries and initial non-English selection when
 isolated reviewed fixtures are available. Unpublished production languages are
 skipped rather than enabled for testing.
@@ -112,10 +112,10 @@ For isolated verification, use the separate seeded test database:
 
 ```bash
 pnpm test:integration
-pnpm exec tsx tests/e2e/localization-fixture.ts
+pnpm --filter @hospital/web exec tsx tests/e2e/localization-fixture.ts
 # The fixture prints a temporary application directory:
-pnpm exec next build <temporary-directory> --webpack
-pnpm exec next start <temporary-directory> -H 127.0.0.1 -p 3111
+pnpm --filter @hospital/web exec next build <temporary-directory> --webpack
+pnpm --filter @hospital/web exec next start <temporary-directory> -H 127.0.0.1 -p 3111
 # Separate terminal:
 E2E_BASE_URL=http://localhost:3111 pnpm test:e2e tests/e2e/localization.spec.ts
 ```
