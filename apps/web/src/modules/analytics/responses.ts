@@ -1,11 +1,12 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import type { ReportFilter, ReportScope } from "./overview";
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@hospital/database/client";
 
 export interface ResponseListItem {
   id: string;
   publicId: string;
+  source: "PAPER_IMPORT" | "ONLINE";
   submittedAt: Date;
   status: "COMPLETE" | "INCOMPLETE";
   patientIndex: number | null;
@@ -62,6 +63,7 @@ export async function listResponses(
       select: {
         id: true,
         publicId: true,
+        paperImport: { select: { id: true } },
         submittedAt: true,
         status: true,
         patientIndex: true,
@@ -81,6 +83,7 @@ export async function listResponses(
     items: rows.map((row) => ({
       id: row.id,
       publicId: row.publicId,
+      source: row.paperImport ? "PAPER_IMPORT" : "ONLINE",
       submittedAt: row.submittedAt,
       status: row.status,
       patientIndex: row.patientIndex?.toNumber() ?? null,
@@ -101,6 +104,7 @@ export async function listResponses(
 export interface ResponseDetail {
   id: string;
   publicId: string;
+  source: "PAPER_IMPORT" | "ONLINE";
   submittedAt: Date;
   status: "COMPLETE" | "INCOMPLETE";
   patientIndex: number | null;
@@ -133,6 +137,7 @@ export async function getResponseDetail(submissionId: string): Promise<ResponseD
     select: {
       id: true,
       publicId: true,
+      paperImport: { select: { id: true } },
       submittedAt: true,
       status: true,
       patientIndex: true,
@@ -191,6 +196,7 @@ export async function getResponseDetail(submissionId: string): Promise<ResponseD
   return {
     id: row.id,
     publicId: row.publicId,
+    source: row.paperImport ? "PAPER_IMPORT" : "ONLINE",
     submittedAt: row.submittedAt,
     status: row.status,
     patientIndex: row.patientIndex?.toNumber() ?? null,

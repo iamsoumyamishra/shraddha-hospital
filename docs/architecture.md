@@ -4,9 +4,7 @@ Dashboard PDF reports use a lazily loaded client-side jsPDF/canvas renderer and
 the existing authorized aggregate snapshot. They add no backend endpoint or
 schema. See [reports](reports.md) for scope, page limits and accessibility limits.
 
-One Next.js App Router application uses PostgreSQL/Prisma for feedback and
-Better Auth for staff identity. Patient routes and protected staff routes share
-the application; server modules own scoring, persistence and authorization.
+Two Next.js App Router applications share PostgreSQL/Prisma and Better Auth staff accounts. Web serves patient routes and protected dashboards; paper-feedback provides staff-only standard form generation, local image processing and reviewed imports. Shared database, identity and scoring packages prevent duplicated clients and permission rules. Each app has its own auth origin and cookie namespace; users sign in separately. See [paper workflow](paper-feedback.md) and [decision 0003](decisions/0003-paper-feedback-app.md).
 
 `apps/web/src/i18n` configures next-intl and review-gated locale availability. A root
 client provider keeps patient drafts in volatile memory across locale navigation.
@@ -47,13 +45,18 @@ one transaction. It uses checked-in questionnaire data without running seeds.
 
 ## Workspace boundaries
 
-The pnpm/Turborepo workspace contains one deployable application, `@hospital/web`
-in `apps/web`. It depends on `@hospital/scoring` in `packages/scoring` and
-`@hospital/typescript-config` in `packages/typescript-config`. Scoring exports
-TypeScript source; Next.js transpiles it and traces runtime dependencies from the
-repository root for standalone output. It has no database/auth/UI dependencies.
+The pnpm/Turborepo workspace contains `@hospital/web` and
+`@hospital/paper-feedback`. Both transpile shared TypeScript source packages and
+trace dependencies from the repository root for standalone output.
+`@hospital/database` supplies one canonical generated Prisma client and server-only
+singleton; `/cli` is reserved for operator scripts. `@hospital/identity` owns the
+staff auth factory, membership loading and pure permission rules.
+`@hospital/scoring` remains independent of database/auth/UI dependencies.
+`@hospital/typescript-config` supplies compiler defaults.
 
-Prisma, migrations, survey authoring, localization tooling and app tests remain
-owned by the web application. Root scripts delegate without changing their working
-directory assumptions. No additional API service or deployment is introduced.
-See [ADR 0002](decisions/0002-turborepo.md) for cache and environment decisions.
+Schema, migrations, seed, survey authoring and localization tooling remain owned
+by web; root DB/i18n scripts keep that working directory. Both app builds apply
+canonical migrations. Tests live with their apps; integration suites run serially
+against a separate test database. There is no separate API service.
+See [ADR 0002](decisions/0002-turborepo.md) for the original migration and
+[ADR 0003](decisions/0003-paper-feedback-app.md) for the second app.

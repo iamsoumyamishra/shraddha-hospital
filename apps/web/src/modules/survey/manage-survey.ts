@@ -5,7 +5,7 @@ import marathiDefaults from "../../../translations/surveys/outpatient-experience
 import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { NotAuthorisedError, type StaffContext } from "@/lib/authorization";
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@hospital/database/client";
 import { presentationSchema } from "./localization";
 import { scoringPolicyRulesSchema } from "@hospital/scoring/policy";
 import { surveyDraftSchema, type SurveyDraftInput } from "./management-schema";
@@ -21,9 +21,8 @@ export class SurveyManagementError extends Error {
   constructor(message: string, public status = 422) { super(message); }
 }
 
-export function managedHospitalIds(staff: StaffContext): string[] {
-  return [...new Set(staff.memberships.filter((membership) => membership.role === "HOSPITAL_ADMIN" && membership.scopeType === "HOSPITAL").map((membership) => membership.hospitalId))];
-}
+export { hospitalAdminIds as managedHospitalIds } from "@hospital/identity/scope";
+import { hospitalAdminIds as managedHospitalIds } from "@hospital/identity/scope";
 
 function assertScope(staff: StaffContext, hospitalId: string) {
   if (!managedHospitalIds(staff).includes(hospitalId)) throw new NotAuthorisedError();

@@ -1,6 +1,6 @@
 # 0002 — Turborepo workspace with one application
 
-Status: accepted.
+Status: accepted for the original monorepo migration. The one-app/database boundary is superseded by [ADR 0003](0003-paper-feedback-app.md).
 
 ## Context
 

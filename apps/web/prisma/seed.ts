@@ -2,7 +2,7 @@ import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Prisma, PrismaClient } from "../src/generated/prisma/client";
+import { Prisma, PrismaClient } from "@hospital/database/client";
 import { computeSubmissionScores } from "@hospital/scoring";
 import { POLICY_V1 } from "@hospital/scoring/policy";
 import {

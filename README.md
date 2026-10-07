@@ -19,6 +19,9 @@ database connectivity and migration permissions. See [deployment](docs/deploymen
 This Turborepo uses pnpm workspaces:
 
 - `apps/web`: the Next.js app, Prisma schema/migrations, translations and app tests.
+- `apps/paper-feedback`: staff login, printable PDFs and reviewed photo imports.
+- `packages/database`: shared Prisma client (schema/migrations remain in web).
+- `packages/identity`: shared staff authentication and authorization.
 - `packages/scoring`: pure scoring functions/policy definitions and their unit tests.
 - `packages/typescript-config`: shared strict TypeScript defaults.
 
@@ -30,7 +33,7 @@ See the [architecture decision](docs/decisions/0002-turborepo.md).
 
 ## Local setup
 
-Use Node.js 22 or newer and pnpm 11.7.0 with the committed lockfile. Copy
+Use Node.js 22.9 or newer and pnpm 11.7.0 with the committed lockfile. Copy
 `.env.example` to `apps/web/.env` and configure
 the database, authentication secret and local application origins.
 
@@ -41,7 +44,7 @@ pnpm db:generate
 pnpm db:deploy
 # Development-only synthetic data; do not seed a production database:
 pnpm db:seed
-pnpm dev
+pnpm dev:web
 ```
 
 The supplied compose file creates development and test PostgreSQL databases on
@@ -97,3 +100,30 @@ the default `gemini-3.5-flash-lite`. Review generated wording before saving and
 follow the [localization workflow](docs/localization.md) before enabling a language.
 `i18n:sync` prepares empty fields for changed feedback wording, without making
 network requests. Production builds reject stale reviewed feedback catalogs.
+
+## Paper feedback app
+
+See [paper feedback](docs/paper-feedback.md) for the workflow and limitations.
+Copy `apps/paper-feedback/.env.example` to `apps/paper-feedback/.env`, replace
+the placeholders, and use the same database as web. Set its own
+`BETTER_AUTH_URL=http://localhost:3001` and a strong auth secret. Existing staff
+credentials work; hospital-wide administrator membership is required.
+
+```bash
+pnpm dev:paper
+# Or start both configured apps:
+pnpm dev
+```
+
+Open http://localhost:3001. Download a versioned English form, photograph every
+page, select its four printed corner crosses, inspect mark suggestions and
+review all answers before saving. Responses appear in web reports with the
+same server scoring. Response lists/details identify paper imports. Photos stay
+in browser memory; optional Tesseract OCR also runs locally and needs review.
+No paid API key is required. Printed forms and handwriting require a pilot
+before operational use. Nothing automatically submits detected ticks.
+
+`pnpm build` builds both apps and applies pending migrations to the configured
+database. Integration suites run serially against the separate test database.
+`pnpm test:e2e:paper` runs browser checks; mutation checks require
+`PAPER_E2E_ISOLATED=1`, `SEED_STAFF_PASSWORD` and a seeded isolated test server.

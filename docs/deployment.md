@@ -111,3 +111,20 @@ CI workflow in this repository.
 
 See [Vercel monorepo setup](https://vercel.com/docs/monorepos) and
 [Next.js standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output).
+
+## Paper app deployment
+
+The new `apps/paper-feedback` app is currently local, not provisioned in production.
+Deploy it as a separate Next.js project with root directory apps/paper-feedback
+and access to workspace files outside that directory. Its vercel.json supplies
+install/build commands. Configure DATABASE_URL (or the shared Neon
+STORAGE_DATABASE_URL/STORAGE_DATABASE_URL_UNPOOLED), BETTER_AUTH_SECRET,
+its own HTTPS BETTER_AUTH_URL and optional NEXT_PUBLIC_WEB_URL pointing to web.
+Use the same hospital database; TEST_DATABASE_URL must remain separate.
+No translation/OCR API secret is required. See its .env.example.
+
+Canonical migrations remain in apps/web/prisma. Both app builds deploy pending
+migrations and generate the shared client. New migration is additive and requires
+a corresponding web deployment because both now use the shared generated client.
+Never use development seed/reset commands in production.
+Local Node minimum is 22.9 (shared client generation uses --env-file-if-exists).

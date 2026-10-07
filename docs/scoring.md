@@ -20,3 +20,14 @@ submission/category scores and must show counts, coverage and reporting period.
 These scores measure reported experience, without clinical-validation claims.
 Published surveys and policies remain immutable. Changes require a new version;
 historical answers and scores are preserved. Comments do not change scores.
+
+## Paper responses
+
+Reviewed paper imports use the same published survey, immutable policy and pure
+server scoring as web submissions. Explicit N/A is excluded, not scored zero.
+Insufficient answered categories produce INCOMPLETE with no official index when
+the policy permits. Overall rating/comments remain separate from the index.
+Dashboard aggregates include eligible imported submissions, with response count
+and period unchanged; import timestamps determine the reporting period.
+Paper provenance is visible in response lists/details. It does not verify patient
+identity or establish an invitation response-rate denominator.

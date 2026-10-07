@@ -1,0 +1,26 @@
+{
+  "name": "@hospital/identity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./scope": "./src/scope.ts",
+    "./auth": "./src/auth.ts",
+    "./staff": "./src/staff.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hospital/database": "workspace:*",
+    "better-auth": "^1.7.7",
+    "next": "16.3.8",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@hospital/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/react": "^19"
+  }
+}

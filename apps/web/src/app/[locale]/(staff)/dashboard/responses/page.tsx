@@ -132,6 +132,7 @@ export default async function ResponsesPage({
                       <Badge variant={item.status === "COMPLETE" ? "secondary" : "outline"}>
                         {item.status}
                       </Badge>
+                      <span className="block text-xs text-muted-foreground">{item.source === "PAPER_IMPORT" ? "Paper import" : "Online feedback"}</span>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.patientIndex === null ? (

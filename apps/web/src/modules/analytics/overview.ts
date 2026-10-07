@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@hospital/database/client";
 
 /**
  * Scoped reporting queries.

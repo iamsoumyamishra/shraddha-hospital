@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.9.0"
   },
   "scripts": {
     "dev": "turbo run dev",
@@ -15,7 +15,7 @@
     "typecheck": "turbo run typecheck",
     "test": "pnpm test:unit && pnpm test:integration",
     "test:unit": "turbo run test:unit",
-    "test:integration": "turbo run test:integration",
+    "test:integration": "turbo run test:integration --concurrency=1",
     "test:e2e": "pnpm --filter @hospital/web test:e2e",
     "db:generate": "pnpm --filter @hospital/web db:generate",
     "db:migrate": "pnpm --filter @hospital/web db:migrate",
@@ -26,7 +26,11 @@
     "i18n:check": "pnpm --filter @hospital/web i18n:check",
     "i18n:sync": "pnpm --filter @hospital/web i18n:sync",
     "i18n:review": "pnpm --filter @hospital/web i18n:review",
-    "i18n:survey": "pnpm --filter @hospital/web i18n:survey"
+    "i18n:survey": "pnpm --filter @hospital/web i18n:survey",
+    "dev:web": "pnpm --filter @hospital/web dev",
+    "dev:paper": "pnpm --filter @hospital/paper-feedback dev",
+    "build:paper": "turbo run build --filter=@hospital/paper-feedback",
+    "test:e2e:paper": "pnpm --filter @hospital/paper-feedback test:e2e"
   },
   "devDependencies": {
     "turbo": "^2.8.19"

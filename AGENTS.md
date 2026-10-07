@@ -42,7 +42,7 @@ The confirmation page must not expose patient information through URLs. Do not p
 
 ## 4. Architecture
 
-Use a modular monolith: one Next.js application with PostgreSQL. Separate patient and staff interfaces, but keep deployment and business logic simple.
+Use a pnpm/Turborepo workspace with two Next.js apps sharing PostgreSQL: `apps/web` serves patient feedback and dashboards; `apps/paper-feedback` imports reviewed standard paper forms. Shared database, identity and scoring packages keep domain rules consistent. See docs/paper-feedback.md and docs/decisions/0003-paper-feedback-app.md.
 
 Modules:
 - Survey: immutable published questionnaires, translations, category mappings, applicability rules.
@@ -98,7 +98,10 @@ apps/web/
   scripts/         # localization tooling and test DB initialization
   tests/           # app unit, integration and browser tests
   .env             # ignored local configuration
+apps/paper-feedback/ # separate staff-only paper import app, port 3001
 packages/
+  database/        # shared Prisma client; canonical schema remains apps/web/prisma
+  identity/        # staff auth, membership resolution and permission rules
   scoring/         # pure TypeScript scoring/policy and unit tests
   typescript-config/
 docs/
@@ -115,7 +118,7 @@ Run root `pnpm install`, `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`,
 `pnpm test:unit`, `pnpm test:integration` and `pnpm build`. Root DB/i18n/test:e2e
 commands forward to the web app; file arguments are relative to `apps/web`.
 Copy `.env.example` to `apps/web/.env`. Builds apply migrations and are uncached.
-Use workspace imports for scoring; keep database/auth code inside the web app.
+Use shared workspace imports for database, identity and scoring. The database main export is server-only; its /cli entry is only for trusted Node operator scripts. Copy apps/paper-feedback/.env.example to apps/paper-feedback/.env using the same database, its own auth origin and a strong secret. Run pnpm dev:paper and pnpm test:e2e:paper for that app.
 See docs/decisions/0002-turborepo.md and docs/deployment.md.
 
 Keep server-only database/auth code out of client bundles. Components render UI; modules implement domain rules. Avoid duplicated formulas or permission checks.

@@ -41,3 +41,13 @@ Draft generation does not enable patient languages.
 The codebase now uses a pnpm/Turborepo workspace with `apps/web`, shared scoring
 and TypeScript configuration packages. It still deploys a single application;
 see [ADR 0002](decisions/0002-turborepo.md).
+
+## Implemented locally: paper feedback app
+
+Separate staff app with shared database/identity/scoring, versioned English PDF
+forms, manual perspective alignment, conservative mark suggestions, per-answer
+review, optional local comment OCR and atomic audited imports. Production
+provisioning, existing-form calibration, automatic corner detection, robust
+handwriting recognition and reviewed multilingual printing remain future work.
+Pilot thresholds and photo quality with synthetic/consented representative forms
+before operational use.

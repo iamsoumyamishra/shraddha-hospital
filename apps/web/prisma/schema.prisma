@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../../../packages/database/src/generated/prisma"
 }
 
 datasource db {
@@ -26,6 +26,7 @@ model Hospital {
   memberships     Membership[]
   submissions     FeedbackSubmission[]
   auditLogs       AuditLog[]
+  paperImports    PaperFeedbackImport[]
 
   @@map("hospitals")
 }
@@ -154,6 +155,7 @@ model StaffUser {
   memberships Membership[]
   cases       FeedbackCase[]
   auditLogs   AuditLog[]
+  paperImports PaperFeedbackImport[]
 
   @@map("staff_users")
 }
@@ -391,6 +393,7 @@ model FeedbackSubmission {
   categoryScores       CategoryScore[]
   followUpContact      FollowUpContact?
   case                 FeedbackCase?
+  paperImport          PaperFeedbackImport?
 
   @@unique([surveyVersionId, idempotencyKey])
   @@index([hospitalId, submittedAt])
@@ -499,4 +502,24 @@ model AuditLog {
   @@index([hospitalId, createdAt])
   @@index([actorStaffId, createdAt])
   @@map("audit_logs")
+}
+
+/// Provenance for staff-reviewed paper submissions. Images remain browser-local.
+model PaperFeedbackImport {
+  id              String   @id @default(uuid()) @db.Uuid
+  submissionId    String   @unique @db.Uuid
+  hospitalId      String   @db.Uuid
+  reviewerStaffId String   @db.Uuid
+  sourceDigest    String
+  pageHashes      String[]
+  templateVersion String
+  reviewedAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  submission FeedbackSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  reviewer StaffUser @relation(fields: [reviewerStaffId], references: [id])
+
+  @@unique([hospitalId, sourceDigest])
+  @@index([hospitalId, reviewedAt])
+  @@map("paper_feedback_imports")
 }

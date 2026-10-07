@@ -83,6 +83,7 @@ export default async function ResponseDetailPage({
             <Badge variant={detail.status === "COMPLETE" ? "secondary" : "outline"}>
               {detail.status}
             </Badge>
+            <Badge variant="outline">{detail.source === "PAPER_IMPORT" ? "Paper import" : "Online feedback"}</Badge>
           </CardContent>
         </Card>
 

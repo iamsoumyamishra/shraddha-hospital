@@ -44,3 +44,20 @@ Question reset uses the same hospital-wide administrator scope and same-origin
 mutation checks as authoring. Its transactional audit records the administrator
 and new survey version; reset does not delete patient responses or send any
 content to external translation providers.
+
+## Reviewed paper feedback
+
+Paper photos and canvas previews stay in volatile browser memory; they are not
+uploaded or retained by the server. Only approved answers, optional comments and
+source hashes are submitted. Optional Tesseract OCR runs in a browser worker;
+its engine/language files may download from public CDNs, but photos are not sent
+to an OCR provider. Handwriting needs manual verification. Avoid clinical/contact
+details; this app does not capture follow-up contact or consent. Existing feedback
+retention and restricted staff access apply. Each import audits its reviewer.
+
+Exact photo hashes prevent duplicate imports of identical files; rephotographed
+paper cannot be deduplicated reliably. Hashes are client-provided provenance, not
+proof of a patient visit or invitation. Hospital-wide admins alone may import;
+branch/department-scoped users are denied. Separate app cookie prefixes prevent
+localhost sessions from overwriting one another. Staff self-registration is
+disabled in both apps; provision accounts using controlled operator workflows.

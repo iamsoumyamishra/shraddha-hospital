@@ -83,3 +83,20 @@ The Questions page bulk translator sends one `translate` request per question
 and honors the local throttle's `Retry-After` before retrying (up to three retries
 per question). Partial results remain unsaved; cancellation sends no save/publish
 action. Provider quota responses without `Retry-After` leave that wording unchanged.
+
+## Paper app API
+
+`apps/paper-feedback` provides `/api/auth/[...all]`, `/api/health`, and
+`POST /api/imports`. Imports require a signed-in active staff user with hospital-wide
+HOSPITAL_ADMIN membership and a same-origin JSON request (maximum 32 KiB).
+The strict body contains surveyVersionId, templateVersion=`paper-v1`, pageHashes
+(one per page), UUID idempotencyKey, locale, visitType, servicesUsed, respondentRole,
+overallRating (1–5), optional comment (2000 characters), confirmed=true, and
+answers `{questionId, rating: 1–5|null, reviewed: true}`. Null means explicit N/A.
+Every published question must occur exactly once. No client scores or hospital IDs
+are accepted. Server validation/scoring and atomic persistence precede acknowledgement.
+Success is `{saved:true,replayed:boolean}`; errors use `{error:string}` with
+400 malformed JSON, 401 unauthenticated, 403 scope/origin, 409 conflict,
+413 payload limit, 415 content type, 422 invalid review/content or 500 safe failure.
+Retries of the same source within the same survey return replayed=true.
+Health returns 503 if the shared database is unavailable.

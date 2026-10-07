@@ -132,3 +132,11 @@ catalogs. See [reset behavior](question-management.md#restore-defaults).
 The Questions page supports **Translate all questions** for Hindi/Marathi draft
 wording using current English. This runs the same protected per-question Gemini
 requests, preserves failed wording, and leaves human-review gates unchanged.
+
+## Paper app languages
+
+The first printable template uses published English questions and policy scale
+labels. The app's staff UI is English. The recorded original response language
+can be English, Hindi or Marathi; this does not publish translated patient surveys.
+Optional local comment OCR supports eng/hin/mar and is a draft requiring review.
+Reviewed multilingual print templates are a future extension.

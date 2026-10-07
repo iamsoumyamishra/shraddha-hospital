@@ -7,7 +7,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
-  transpilePackages: ["@hospital/scoring"],
+  transpilePackages: ["@hospital/scoring", "@hospital/database", "@hospital/identity"],
   serverExternalPackages: ["@prisma/adapter-pg", "pg"],
 };
 

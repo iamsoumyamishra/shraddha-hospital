@@ -2,7 +2,7 @@ import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { z } from "zod";
-import { prisma } from "../../src/lib/db";
+import { prisma } from "@hospital/database/cli";
 import { presentationSchema, surveySourceMessages } from "../../src/modules/survey/localization";
 import { scoringPolicyRulesSchema } from "@hospital/scoring/policy";
 import { changedKeys, contentHash, isReviewed, sourceHashes, translationIssues, type FlatMessages, type TranslationReview } from "../../src/i18n/translation-workflow";

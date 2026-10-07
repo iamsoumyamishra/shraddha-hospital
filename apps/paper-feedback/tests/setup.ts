@@ -1,0 +1,10 @@
+import { config } from "dotenv";
+import { resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+config({ quiet: true });
+const testUrl = process.env.TEST_DATABASE_URL;
+if (!testUrl || [process.env.DATABASE_URL, process.env.STORAGE_DATABASE_URL, process.env.STORAGE_DATABASE_URL_UNPOOLED].includes(testUrl)) throw new Error("A separate TEST_DATABASE_URL is required");
+process.env.DATABASE_URL = testUrl;
+delete process.env.STORAGE_DATABASE_URL;
+delete process.env.STORAGE_DATABASE_URL_UNPOOLED;
+execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], { cwd: resolve("../web"), env: process.env, stdio: "pipe" });

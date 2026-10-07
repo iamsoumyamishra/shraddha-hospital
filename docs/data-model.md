@@ -37,3 +37,14 @@ Reset to defaults creates new survey/category/question IDs, retains the scoped
 scoring-policy reference and existing category weights, and retires old drafts.
 Published records and feedback are preserved. Hindi/Marathi question translations
 remain DRAFT with no review metadata. No schema change is required.
+
+## Paper import provenance
+
+The additive `20261007140000_paper_feedback_imports` migration creates
+`PaperFeedbackImport`, one-to-one with FeedbackSubmission. It records hospital,
+reviewer staff ID, template version, ordered page SHA-256 hashes, a combined
+source digest and review timestamp. Hospital/digest and submission ID are unique.
+Foreign keys preserve reviewer attribution; existing survey history is unchanged.
+Photos are not stored. Imports create ordinary answers/category scores and an
+audit event in one transaction. Branch/department remain null in this first
+hospital-wide implementation. submittedAt is the import time, not the visit time.
