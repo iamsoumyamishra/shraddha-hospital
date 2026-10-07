@@ -33,3 +33,7 @@ requires the manual review workflow.
 Implemented: administrator-confirmed Reset to defaults publishes a new scoped
 English questionnaire with all original questions and prefilled Hindi/Marathi
 drafts while preserving historical responses and scoring.
+
+Implemented: Translate all questions with Hindi/Marathi choices, replacement
+confirmation, progress, stop, throttle handling and retry of unchanged questions.
+Draft generation does not enable patient languages.

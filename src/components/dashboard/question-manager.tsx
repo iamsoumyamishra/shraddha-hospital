@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Copy, Plus, Save, Trash2, Send, Loader2, Sparkles, ChevronDown, RotateCcw } from "lucide-react";
 import type { ManagedSurvey } from "@/modules/survey/manage-survey";
 import type { SurveyDraftInput } from "@/modules/survey/management-schema";
@@ -14,6 +14,30 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+
+class TranslationRequestError extends Error {
+  constructor(message: string, public retryAfter?: number) { super(message); }
+}
+
+async function requestTranslation(surveyId: string, english: string, locale: "hi" | "mr", signal?: AbortSignal) {
+  const response = await fetch("/api/staff/surveys", { method: "POST", signal, headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "translate", surveyId, english, locale }) });
+  const result = await response.json() as { translation?: string; error?: string };
+  if (!response.ok || !result.translation) {
+    const seconds = Number(response.headers.get("Retry-After"));
+    throw new TranslationRequestError(result.error ?? "Unable to translate this question.", response.status === 429 && seconds > 0 && seconds <= 60 ? seconds : undefined);
+  }
+  return result.translation;
+}
+
+function waitForTranslationLimit(seconds: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); signal.removeEventListener("abort", abort); reject(new DOMException("Stopped", "AbortError")); };
+    const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve(); }, seconds * 1000);
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+  });
+}
 
 export function QuestionManager({ initialSurveys, aiTranslationAvailable = false }: { initialSurveys: ManagedSurvey[]; aiTranslationAvailable?: boolean }) {
   const [surveys, setSurveys] = useState(initialSurveys);
@@ -32,9 +56,15 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
   const [translating, setTranslating] = useState<{ key: string; locale: "hi" | "mr" } | null>(null);
   const [confirmTranslation, setConfirmTranslation] = useState<{ key: string; locale: "hi" | "mr" } | null>(null);
   const [aiFeedback, setAiFeedback] = useState<{ key: string; text: string; error: boolean } | null>(null);
-  const busy = pending || translating !== null;
+  const [bulk, setBulk] = useState<{ locale: "hi" | "mr"; total: number; completed: number; waiting: boolean } | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState<{ locale: "hi" | "mr"; keys: string[] } | null>(null);
+  const [bulkFailures, setBulkFailures] = useState<{ locale: "hi" | "mr"; keys: string[] } | null>(null);
+  const bulkController = useRef<AbortController | null>(null);
+  const busy = pending || translating !== null || bulk !== null;
   const editable = survey?.status === "DRAFT" && survey.editable;
   const dirty = JSON.stringify(draft) !== JSON.stringify(survey?.draft ?? null);
+
+  useEffect(() => () => bulkController.current?.abort(), []);
 
   useEffect(() => {
     if (!dirty) return;
@@ -44,7 +74,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
   }, [dirty]);
 
   function select(id: string) {
-    setQuestionLanguages({}); setSelected(id); setDraft(surveys.find((item) => item.id === id)?.draft ?? null); setError(null); setNotice(null); setAiFeedback(null);
+    setBulkFailures(null); setQuestionLanguages({}); setSelected(id); setDraft(surveys.find((item) => item.id === id)?.draft ?? null); setError(null); setNotice(null); setAiFeedback(null);
   }
 
   async function perform(action: "clone" | "save" | "publish" | "reset") {
@@ -60,7 +90,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
       const updated = result.survey;
       setSurveys((current) => [updated, ...current.filter((item) => item.id !== updated.id)]);
       setSelected(updated.id); setDraft(updated.draft); setConfirmPublish(false); setConfirmReset(false);
-      if (action !== "save") setQuestionLanguages({});
+      if (action !== "save") { setQuestionLanguages({}); setBulkFailures(null); }
       setNotice(action === "reset" ? `Version ${updated.version} restores the 15 default English questions. Hindi and Marathi defaults are prefilled drafts; existing responses remain unchanged.` : action === "publish" ? `Version ${updated.version} is published. New patient links use this version; existing responses remain unchanged.`
         : action === "clone" ? `Draft version ${updated.version} is ready to edit.` : "Draft saved. Patients continue to see the published version.");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to update the survey."); }
@@ -72,16 +102,57 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
     if (!survey || !question?.prompts.en.trim() || busy || !editable || !aiTranslationAvailable) return;
     setTranslating({ key, locale }); setAiFeedback(null); setNotice(null); setError(null);
     try {
-      const response = await fetch("/api/staff/surveys", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "translate", surveyId: survey.id, english: question.prompts.en, locale }) });
-      const result = await response.json() as { translation?: string; error?: string };
-      if (!response.ok || !result.translation) throw new Error(result.error ?? "Unable to translate this question.");
-      setDraft((current) => current && ({ ...current, questions: current.questions.map((item) => item.key === key ? { ...item, prompts: { ...item.prompts, [locale]: result.translation! } } : item) }));
+      const translation = await requestTranslation(survey.id, question.prompts.en, locale);
+      setDraft((current) => current && ({ ...current, questions: current.questions.map((item) => item.key === key ? { ...item, prompts: { ...item.prompts, [locale]: translation } } : item) }));
       setQuestionLanguages((current) => ({ ...current, [key]: locale }));
       setAiFeedback({ key, text: `AI ${locale === "hi" ? "Hindi" : "Marathi"} draft added. Review the wording, then save the draft.`, error: false });
     } catch (caught) {
       setAiFeedback({ key, text: caught instanceof Error ? caught.message : "Unable to translate this question.", error: true });
     } finally { setTranslating(null); }
+  }
+
+  async function translateAll(locale: "hi" | "mr", keys: string[]) {
+    if (!survey || !draft || busy || !editable || !aiTranslationAvailable) return;
+    const questions = draft.questions.filter((question) => keys.includes(question.key));
+    if (!questions.length || questions.some((question) => !question.prompts.en.trim())) return;
+    const controller = new AbortController();
+    bulkController.current = controller;
+    setBulk({ locale, total: questions.length, completed: 0, waiting: false });
+    setConfirmBulk(null); setBulkFailures(null); setError(null); setNotice(null); setAiFeedback(null);
+    const failed: string[] = [];
+    let succeeded = 0;
+    let completed = 0;
+    try {
+      for (const question of questions) {
+        if (controller.signal.aborted) break;
+        try {
+          let translation: string;
+          let retries = 0;
+          while (true) {
+            try { translation = await requestTranslation(survey.id, question.prompts.en, locale, controller.signal); break; }
+            catch (caught) {
+              if (!(caught instanceof TranslationRequestError) || !caught.retryAfter || retries++ >= 3) throw caught;
+              setBulk({ locale, total: questions.length, completed, waiting: true });
+              await waitForTranslationLimit(caught.retryAfter, controller.signal);
+              setBulk({ locale, total: questions.length, completed, waiting: false });
+            }
+          }
+          if (controller.signal.aborted) break;
+          setDraft((current) => current && ({ ...current, questions: current.questions.map((item) => item.key === question.key ? { ...item, prompts: { ...item.prompts, [locale]: translation } } : item) }));
+          setQuestionLanguages((current) => ({ ...current, [question.key]: locale }));
+          succeeded++;
+        } catch {
+          if (controller.signal.aborted) break;
+          failed.push(question.key);
+        }
+        completed++;
+        setBulk({ locale, total: questions.length, completed, waiting: false });
+      }
+      const remaining = questions.slice(completed).map((question) => question.key);
+      const retryKeys = [...failed, ...remaining];
+      if (retryKeys.length) setBulkFailures({ locale, keys: retryKeys });
+      setNotice(`${controller.signal.aborted ? "Translation stopped." : "Bulk translation finished."} ${succeeded} of ${questions.length} ${locale === "hi" ? "Hindi" : "Marathi"} drafts added. ${retryKeys.length ? `${retryKeys.length} questions were left unchanged. ` : ""}Review the wording, then save the draft.`);
+    } finally { bulkController.current = null; setBulk(null); }
   }
 
   function updateQuestion(index: number, update: Partial<SurveyDraftInput["questions"][number]>) {
@@ -126,6 +197,11 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
 
     {error && <Alert variant="destructive" role="alert"><AlertDescription>{error} {error.includes("another session") && <Button variant="link" onClick={() => window.location.reload()}>Reload latest draft</Button>}</AlertDescription></Alert>}
     {notice && <p role="status" className="rounded-lg border border-primary/20 bg-accent p-4 text-sm text-accent-foreground">{notice}</p>}
+    {bulk && <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-accent p-4 text-sm">
+      <span>{bulk.waiting ? "Waiting for the translation request limit…" : `Translating all questions into ${bulk.locale === "hi" ? "Hindi" : "Marathi"}…`} {bulk.completed} of {bulk.total} processed.</span>
+      <Button variant="outline" size="sm" onClick={() => bulkController.current?.abort()}>Stop translation</Button>
+    </div>}
+    {bulkFailures && !busy && editable && <Button variant="outline" onClick={() => setConfirmBulk(bulkFailures)}>Retry {bulkFailures.keys.length} untranslated questions</Button>}
     {!survey.editable && <Alert><AlertDescription>This version contains optional or conditional questions. The current editor supports required, unconditional questions only.</AlertDescription></Alert>}
 
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -140,9 +216,13 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
 
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div><h2 className="text-lg font-semibold">Question wording</h2><p className="text-sm text-muted-foreground">Each question uses the existing 1–5 satisfaction scale.</p></div>
+          <div className="flex flex-wrap items-end gap-3">
+          {editable && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" disabled={busy || !aiTranslationAvailable || draft.questions.some((question) => !question.prompts.en.trim())}><Sparkles aria-hidden className="size-4" />Translate all questions<ChevronDown aria-hidden className="size-3.5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
+            {(["hi", "mr"] as const).map((locale) => <DropdownMenuItem key={locale} onSelect={() => setConfirmBulk({ locale, keys: draft.questions.map((question) => question.key) })}>{locale === "hi" ? "हिन्दी · Hindi" : "मराठी · Marathi"}</DropdownMenuItem>)}
+          </DropdownMenuContent></DropdownMenu>}
           <div className="space-y-2"><Label htmlFor="question-language">Language</Label><select id="question-language" className="h-10 rounded-md border border-input bg-background px-3 text-sm" disabled={busy} value={language} onChange={(event) => { setLanguage(event.target.value as typeof language); setQuestionLanguages({}); }}>
             <option value="en">English</option><option value="hi">हिन्दी · Hindi draft</option><option value="mr">मराठी · Marathi draft</option>
-          </select></div>
+          </select></div></div>
         </div>
         {language !== "en" && <p className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">These are translation drafts. Publishing this survey releases English only. The complete {language === "hi" ? "Hindi" : "Marathi"} survey and interface still need human review before patients can select them.</p>}
 
@@ -214,6 +294,7 @@ export function QuestionManager({ initialSurveys, aiTranslationAvailable = false
       </aside>
     </div>
 
+    <Dialog open={confirmBulk !== null} onOpenChange={(open) => !open && setConfirmBulk(null)}><DialogContent><DialogHeader><DialogTitle>Translate {confirmBulk?.keys.length} questions into {confirmBulk?.locale === "hi" ? "Hindi" : "Marathi"}?</DialogTitle><DialogDescription>Use each question’s current English wording. Existing {confirmBulk?.locale === "hi" ? "Hindi" : "Marathi"} wording for these questions will be replaced only when translation succeeds. English and the other language stay intact. Results remain unsaved drafts requiring review.</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setConfirmBulk(null)}>Cancel</Button><Button onClick={() => { const choice = confirmBulk; if (choice) void translateAll(choice.locale, choice.keys); }}>Translate questions</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={confirmReset} onOpenChange={(open) => !pending && setConfirmReset(open)}><DialogContent><DialogHeader><DialogTitle>Restore the default questions?</DialogTitle><DialogDescription>Confirm the original 15 English questions should become the new published version for this hospital survey. Hindi and Marathi default wording will be prefilled as unreviewed drafts. Existing drafts are archived, unsaved edits are discarded, and previous patient responses remain intact.</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirmReset(false)}>Cancel</Button><Button disabled={busy} onClick={() => void perform("reset")}>{pending ? "Restoring…" : "Confirm reset"}</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={confirmPublish} onOpenChange={(open) => !pending && setConfirmPublish(open)}><DialogContent><DialogHeader><DialogTitle>Publish version {survey.version}?</DialogTitle><DialogDescription>Confirm you have reviewed every English question. This version becomes available to new patients and its wording cannot be edited afterward. Hindi and Marathi remain drafts.</DialogDescription></DialogHeader><DialogFooter>
       <Button variant="outline" disabled={busy} onClick={() => setConfirmPublish(false)}>Cancel</Button><Button disabled={busy} onClick={() => void perform("publish")}>{pending ? "Publishing…" : "Confirm publication"}</Button>

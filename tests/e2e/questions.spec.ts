@@ -153,3 +153,76 @@ test("an administrator restores all default questions and translations", async (
   await page.getByLabel("Language", { exact: true }).selectOption("mr");
   await expect(page.getByLabel("Marathi question", { exact: true }).first()).toHaveValue("स्वागत कक्षातील कर्मचाऱ्यांनी माझे नम्रपणे स्वागत केले.");
 });
+
+
+test("bulk translation preserves source, retries failures and can stop", async ({ page }) => {
+  test.skip(!password || process.env.SURVEY_MANAGEMENT_E2E !== "1", "Requires an isolated synthetic database and configured Gemini key");
+  await page.goto("/en/login");
+  await page.getByLabel("Email").fill("admin@shraddha.example");
+  await page.getByLabel("Password", { exact: true }).fill(password!);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(/\/en\/dashboard/);
+  await page.goto("/en/dashboard/questions");
+  const versions = page.getByLabel("Survey and version");
+  const published = await versions.locator("option").evaluateAll((options) => (options.find((item) => item.textContent?.includes("Shraddha Hospital") && item.textContent?.includes("v1 · published")) as HTMLOptionElement)?.value);
+  await versions.selectOption(published!);
+  const cloned = page.waitForResponse((response) => response.url().endsWith("/api/staff/surveys") && response.request().method() === "POST" && response.request().postDataJSON().action === "clone");
+  await page.getByRole("button", { name: "Create editable draft" }).click();
+  const original = (await (await cloned).json()).survey.draft as { questions: { prompts: { en: string; hi: string; mr: string } }[] };
+  const requests: { english: string; locale: string }[] = [];
+  let retry = false;
+  let throttled = false;
+  let stopped = false;
+  await page.route("**/api/staff/surveys", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const input = route.request().postDataJSON();
+    if (input.action !== "translate") return route.continue();
+    requests.push(input);
+    const index = original.questions.findIndex((question) => question.prompts.en === input.english);
+    if (input.locale === "hi" && !throttled) {
+      throttled = true;
+      return route.fulfill({ status: 429, headers: { "Retry-After": "1" }, contentType: "application/json", body: JSON.stringify({ error: "Wait for request limit" }) });
+    }
+    if (input.locale === "mr") {
+      stopped = true;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify({ translation: "मराठी मसुदा", locale: "mr" }) });
+    }
+    const fails = !retry && index === 1;
+    return route.fulfill({ status: fails ? 502 : 200, contentType: "application/json", body: JSON.stringify(fails ? { error: "Synthetic failed translation" } : { translation: `हिन्दी मसुदा ${index + 1}`, locale: "hi" }) });
+  });
+  const bulk = page.getByRole("button", { name: "Translate all questions", exact: true });
+  await bulk.click();
+  await page.getByRole("menuitem", { name: "हिन्दी · Hindi", exact: true }).click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(requests).toHaveLength(0);
+  await bulk.click();
+  await page.getByRole("menuitem", { name: "हिन्दी · Hindi", exact: true }).click();
+  await page.getByRole("button", { name: "Translate questions", exact: true }).click();
+  await expect(page.getByText(/Waiting for the translation request limit/)).toBeVisible();
+  await expect(page.getByLabel("English question", { exact: true }).first()).toBeDisabled();
+  await expect(page.getByText(/Bulk translation finished. 14 of 15 Hindi drafts added/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save draft", exact: true })).toBeEnabled();
+  expect(requests.slice(1).map((input) => input.english)).toEqual(original.questions.map((question) => question.prompts.en));
+  await page.getByLabel("Display language for question 2", { exact: true }).selectOption("hi");
+  await expect(page.getByLabel("Hindi question", { exact: true }).nth(1)).toHaveValue(original.questions[1]!.prompts.hi);
+  retry = true;
+  await page.getByRole("button", { name: "Retry 1 untranslated questions", exact: true }).click();
+  await page.getByRole("button", { name: "Translate questions", exact: true }).click();
+  await expect(page.getByText(/Bulk translation finished. 1 of 1 Hindi drafts added/)).toBeVisible();
+  const saved = page.waitForResponse((response) => response.url().endsWith("/api/staff/surveys") && response.request().method() === "POST" && response.request().postDataJSON().action === "save");
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  const result = (await (await saved).json()).survey.draft as typeof original;
+  result.questions.forEach((question, index) => expect(question.prompts).toEqual({ ...original.questions[index]!.prompts, hi: `हिन्दी मसुदा ${index + 1}` }));
+  await bulk.click();
+  await page.getByRole("menuitem", { name: "मराठी · Marathi", exact: true }).click();
+  await page.getByRole("button", { name: "Translate questions", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Stop translation", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Stop translation", exact: true }).click();
+  await expect(page.getByText(/Translation stopped/)).toBeVisible();
+  expect(stopped).toBe(true);
+  await page.getByLabel("Language", { exact: true }).selectOption("mr");
+  const values = await page.getByLabel("Marathi question", { exact: true }).evaluateAll((elements) => elements.map((element) => (element as HTMLTextAreaElement).value));
+  expect(values).toEqual(original.questions.map((question) => question.prompts.mr));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+});

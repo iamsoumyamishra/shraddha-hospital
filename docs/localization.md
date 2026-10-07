@@ -128,3 +128,7 @@ Reset to defaults on the Questions page restores the checked-in Hindi/Marathi
 question drafts alongside the original English questions in a new published
 English version. It does not approve full locale bundles or patient interface
 catalogs. See [reset behavior](question-management.md#restore-defaults).
+
+The Questions page supports **Translate all questions** for Hindi/Marathi draft
+wording using current English. This runs the same protected per-question Gemini
+requests, preserves failed wording, and leaves human-review gates unchanged.

@@ -78,3 +78,8 @@ apply. It atomically publishes a new English version containing the original
 that hospital/survey slug, and audits the administrator. It returns `{ "survey": ... }`.
 Historical questions/responses/scores stay intact. Missing default service
 categories or incompatible scoring rules return 422; stale revisions return 409.
+
+The Questions page bulk translator sends one `translate` request per question
+and honors the local throttle's `Retry-After` before retrying (up to three retries
+per question). Partial results remain unsaved; cancellation sends no save/publish
+action. Provider quota responses without `Retry-After` leave that wording unchanged.

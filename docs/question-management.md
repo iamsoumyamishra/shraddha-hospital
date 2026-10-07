@@ -39,6 +39,16 @@ Generated text stays unsaved until **Save draft**; it needs human review and doe
 not enable a patient language. While translating, editing is paused to prevent
 late results overwriting newer changes. Errors preserve existing text.
 
+**Translate all questions** runs the same server-protected translation action for
+all current English questions in an editable draft, with Hindi/Marathi options.
+Confirm replacement once, follow the processed count, and use **Stop translation**
+to cancel remaining work. Successful drafts stay in memory; failures and stopped
+questions keep their existing wording and can be retried. The editor waits when
+the application's per-staff throttle supplies `Retry-After`; provider failures
+leave the affected question unchanged. Results require review and **Save draft**,
+and never approve a patient language. Bulk translation is unavailable until all
+questions have English wording. No new API, migration or environment setting is needed.
+
 Configure server-only `GEMINI_API_KEY` to enable this optional feature.
 `GEMINI_TRANSLATION_MODEL` defaults to `gemini-3.5-flash-lite`. English question
 wording is sent to Google; do not include patient information. Requests time out
